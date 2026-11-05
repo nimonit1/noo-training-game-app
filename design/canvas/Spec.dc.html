@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>デザイン仕様</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1100px; height: 1500px; box-sizing: border-box; padding: 48px; background: #FFFFFF; color: #222222; font-family: 'Segoe UI', 'Yu Gothic', '游ゴシック', sans-serif; font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; gap: 32px">
+
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 4px solid #E0603A; padding-bottom: 12px">
+    <h1 style="margin: 0; font-size: 32px; line-height: 1.25">デザイン仕様</h1>
+    <span style="font-size: 14px; color: #666666">テーマ: 一般テーマ ・ 脳トレ道場(仮)</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">カラー</h2>
+    <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px">
+      <sc-for list="{{colors}}" as="c" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="height: 72px; border-radius: 16px; border: 2px solid #E3F3F1; background: {{c.hex}}"></div>
+          <span style="font-weight: 700">{{c.name}}</span>
+          <span style="font-size: 14px; color: #666666">{{c.hex}}</span>
+          <span style="font-size: 14px; color: #666666">{{c.use}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size: 14px; color: #666666">背景は白、本文は #222222、補足は #666666。コーラルは面・罫線・図形にだけ使い、小さな文字には使いません。</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">文字</h2>
+    <div style="display: flex; flex-direction: column; border: 2px solid #E3F3F1; border-radius: 16px">
+      <sc-for list="{{type}}" as="t" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 24px; padding: 12px 20px; border-bottom: 2px solid #E3F3F1">
+          <span style="width: 160px; flex-shrink: 0; font-size: 14px; color: #666666">{{t.name}}</span>
+          <span style="flex: 1; font-size: {{t.px}}px; font-weight: {{t.weight}}; line-height: 1.3">脳トレ道場 Segoe UI</span>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size: 14px; color: #666666">日本語は游ゴシック、英数字は Segoe UI。見出し 24px(18pt)、本文 16px(12pt)、タイトル 32px(24pt)。</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">部品のルール</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+      <sc-for list="{{rules}}" as="r" hint-placeholder-count="6">
+        <div style="border-radius: 16px; background: #E3F3F1; padding: 12px 16px; display: flex; flex-direction: column">
+          <span style="font-weight: 700; color: #0F766E">{{r.title}}</span>
+          <span style="font-size: 14px">{{r.body}}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">年代別の設定</h2>
+    <div style="display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; border: 2px solid #E3F3F1">
+      <div style="display: grid; grid-template-columns: 150px repeat(4, minmax(0, 1fr)); background: #0F766E; color: #FFFFFF; font-weight: 700">
+        <div style="padding: 10px 14px">項目</div>
+        <div style="padding: 10px 14px">10代</div>
+        <div style="padding: 10px 14px">20代</div>
+        <div style="padding: 10px 14px">30代</div>
+        <div style="padding: 10px 14px">40代</div>
+      </div>
+      <sc-for list="{{matrix}}" as="row" hint-placeholder-count="6">
+        <div style="display: grid; grid-template-columns: 150px repeat(4, minmax(0, 1fr)); border-top: 2px solid #E3F3F1">
+          <div style="padding: 10px 14px; font-size: 14px; font-weight: 700; background: #E3F3F1">{{row.label}}</div>
+          <div style="padding: 10px 14px; font-size: 14px">{{row.a10}}</div>
+          <div style="padding: 10px 14px; font-size: 14px">{{row.a20}}</div>
+          <div style="padding: 10px 14px; font-size: 14px">{{row.a30}}</div>
+          <div style="padding: 10px 14px; font-size: 14px">{{row.a40}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size: 14px; color: #666666">出題数・制限時間は初期値の仮置きです。プレイ中は正答率に応じて自動で調整します。</span>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">UXの原則</h2>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <sc-for list="{{principles}}" as="p" hint-placeholder-count="5">
+        <div style="display: flex; gap: 12px; align-items: flex-start">
+          <div style="width: 28px; height: 28px; border-radius: 14px; background: #E0603A; flex-shrink: 0; margin-top: 2px"></div>
+          <div style="display: flex; flex-direction: column">
+            <span style="font-weight: 700">{{p.title}}</span>
+            <span style="font-size: 14px; color: #666666">{{p.body}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="border-radius: 16px; background: #FDEAE4; padding: 12px 16px; display: flex; flex-direction: column">
+    <span style="font-weight: 700; color: #B71C1C">前提と注意</span>
+    <span style="font-size: 14px">20代・30代は年代別の直接的な研究根拠が乏しく、40代の処理速度訓練も主に高齢者での結果からの推測です。画面では「脳が若返る」「認知症を防ぐ」といった断定を使いません。</span>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      colors: [
+        { name: 'プライマリ', hex: '#0F766E', use: 'ボタン・見出しの強調' },
+        { name: 'セカンダリ', hex: '#E0603A', use: '図形・罫線・進行表示' },
+        { name: 'ライト1', hex: '#E3F3F1', use: 'カード・選択中の面' },
+        { name: 'ライト2', hex: '#FDEAE4', use: 'お知らせ・目標の面' },
+        { name: '強調の赤', hex: '#B71C1C', use: '注意の文言' },
+        { name: '本文', hex: '#222222', use: '本文(補足は #666666)' }
+      ],
+      type: [
+        { name: 'タイトル 24pt', px: 32, weight: 700 },
+        { name: '見出し 18pt', px: 24, weight: 700 },
+        { name: '本文 12pt', px: 16, weight: 400 },
+        { name: '補足', px: 14, weight: 400 }
+      ],
+      rules: [
+        { title: 'タップ領域', body: '押せる部品は高さ44px以上。主要ボタンは56px、答えるボタンは72px。' },
+        { title: '角丸', body: 'カード24px、ボタンは丸形。やわらかい形で統一します。' },
+        { title: '選択の見せ方', body: '色だけに頼らず、枠線の太さとチェック印でも示します。' },
+        { title: 'アイコン', body: '線のアイコンを使い、絵文字は使いません。' },
+        { title: '数字の見せ方', body: '結果は正解数と正確さを主役にし、他人との比較は任意にします。' },
+        { title: '年代の表示', body: 'ホーム右上のチップで、いつでも切り替えられます。' }
+      ],
+      matrix: [
+        { label: '鍛える機能', a10: '実行機能・注意', a20: 'ワーキングメモリ・注意', a30: '実行機能・処理速度', a40: '処理速度・視覚注意' },
+        { label: '主な手法', a10: 'ルール切替、ストップ&ゴー', a20: 'n-back系、位置おぼえ', a30: '二重課題(同時判断)', a40: '周辺ターゲット判断、時間制限つき反応' },
+        { label: '1日の目安', a10: '5分', a20: '5分', a30: '7分(すきま3分あり)', a40: '8分' },
+        { label: '初期の出題', a10: '8回・3秒', a20: '8回・3秒', a30: '6回・4秒', a40: '6回・4秒' },
+        { label: '動機づけ', a10: 'ランキング、連続日数', a20: '友だち比較、目標', a30: 'すきま時間モード', a40: '週のふりかえり' },
+        { label: '文字サイズ', a10: '本文16px', a20: '本文16px', a30: '本文16px', a40: 'メニュー名18px、余白広め' }
+      ],
+      principles: [
+        { title: '1タップで始められる', body: 'ホームの「スタート」だけで今日のメニューが始まります。' },
+        { title: '年代は初期値、難しさは成績で調整', body: '年代で出題と初期難易度を決め、プレイ中は正答率に合わせて自動調整します。' },
+        { title: '続けやすさを設計する', body: '連続日数・次の目標・間を空けた再挑戦の案内で、継続を後押しします。' },
+        { title: '断定しない結果表示', body: '結果は目安として示し、診断や治療ではないことを明記します。' },
+        { title: '個人情報を聞かない', body: '生年月日は聞かず、年代の選択だけにします。選択は端末内で完結します。' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

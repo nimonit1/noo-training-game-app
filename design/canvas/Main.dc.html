@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>脳トレ道場 プロトタイプ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #222222; font-family: 'Segoe UI', 'Yu Gothic', '游ゴシック', sans-serif; font-size: 16px; line-height: 1.5; display: flex; flex-direction: column">
+
+<sc-if value="{{isSelect}}" hint-placeholder-val="{{true}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 32px 20px 24px; gap: 20px">
+  <div style="display: flex; align-items: center; gap: 10px">
+    <div style="width: 36px; height: 36px; border-radius: 18px; background: #0F766E; display: flex; align-items: center; justify-content: center">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V4a3 3 0 0 0-3 0z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/></svg>
+    </div>
+    <span style="font-weight: 700">脳トレ道場(仮)</span>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <h1 style="margin: 0; font-size: 32px; line-height: 1.25">あなたの年代は?</h1>
+    <p style="margin: 0; font-size: 14px; color: #666666">年代に合わせて、出題と難しさの初期設定が変わります。あとから変更できます。</p>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+    <sc-for list="{{ages}}" as="a" hint-placeholder-count="4">
+      <button onClick="{{a.pick}}" aria-pressed="{{a.selected}}" style="position: relative; text-align: left; border-radius: 24px; padding: 16px; min-height: 148px; box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; font-family: inherit; color: #222222; cursor: pointer; {{a.cardStyle}}">
+        <div style="display: flex; align-items: baseline; gap: 2px">
+          <span style="font-size: 40px; font-weight: 700; line-height: 1.1; color: #0F766E">{{a.num}}</span>
+          <span style="font-size: 16px; font-weight: 700; color: #0F766E">代</span>
+        </div>
+        <span style="font-size: 14px; font-weight: 700">{{a.focus}}</span>
+        <span style="font-size: 14px; color: #666666">{{a.blurb}}</span>
+        <sc-if value="{{a.selected}}" hint-placeholder-val="{{false}}">
+          <div style="position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 14px; background: #0F766E; display: flex; align-items: center; justify-content: center">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>
+          </div>
+        </sc-if>
+      </button>
+    </sc-for>
+  </div>
+  <div style="flex: 1"></div>
+  <div style="display: flex; gap: 8px; align-items: flex-start">
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+    <p style="margin: 0; font-size: 14px; color: #666666">生年月日は聞きません。選んだ内容はこの端末の中だけで使います。</p>
+  </div>
+  <button onClick="{{goHome}}" style="height: 56px; border: none; border-radius: 28px; background: #0F766E; color: #FFFFFF; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer">はじめる</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+  <div style="height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <div style="width: 28px; height: 28px; border-radius: 14px; background: #0F766E"></div>
+      <span style="font-weight: 700">脳トレ道場(仮)</span>
+    </div>
+    <button onClick="{{openMenu}}" aria-label="年代を切り替える" style="height: 44px; padding: 0 14px; border-radius: 22px; border: 2px solid #0F766E; background: #E3F3F1; color: #0F766E; font-family: inherit; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer">
+      <span>{{cur.label}}</span>
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
+  <div style="flex: 1; min-height: 0; padding: 8px 20px 0; display: flex; flex-direction: column; gap: 16px">
+    <div style="position: relative; border-radius: 24px; background: #E3F3F1; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <div style="position: absolute; top: 20px; right: 20px; width: 48px; height: 48px; border-radius: 24px; background: #E0603A"></div>
+      <span style="font-size: 14px; color: #666666">今日のトレーニング</span>
+      <span style="font-size: 24px; font-weight: 700; line-height: 1.3">{{cur.minutes}}分で完了</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{tags}}" as="tg" hint-placeholder-count="2">
+          <span style="font-size: 14px; font-weight: 700; color: #0F766E; background: #FFFFFF; border: 2px solid #0F766E; border-radius: 16px; padding: 0 12px; line-height: 28px">{{tg.t}}</span>
+        </sc-for>
+      </div>
+      <button onClick="{{start}}" style="margin-top: 4px; height: 56px; border: none; border-radius: 28px; background: #0F766E; color: #FFFFFF; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer">スタート</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 24px; line-height: 1.3">今日のメニュー</h2>
+      <sc-for list="{{games}}" as="g" hint-placeholder-count="3">
+        <div style="min-height: 64px; box-sizing: border-box; border: 2px solid #E3F3F1; border-radius: 16px; padding: 0 16px; display: flex; align-items: center; gap: 12px">
+          <div style="width: 36px; height: 36px; border-radius: 18px; background: #E3F3F1; color: #0F766E; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0">{{g.n}}</div>
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+            <span style="font-size: {{bodyPx}}px; font-weight: 700; line-height: 1.3">{{g.name}}</span>
+            <span style="font-size: 14px; color: #666666">{{g.fn}}</span>
+          </div>
+          <span style="font-size: 14px; color: #666666">{{g.min}}分</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="border-radius: 16px; background: #FDEAE4; padding: 12px 16px; display: flex; flex-direction: column">
+      <span style="font-size: 14px; font-weight: 700">{{cur.extraTitle}}</span>
+      <span style="font-size: 14px; color: #666666">{{cur.extraBody}}</span>
+    </div>
+  </div>
+  <div style="height: 64px; border-top: 2px solid #E3F3F1; display: flex">
+    <button aria-label="ホーム" aria-current="page" style="flex: 1; border: none; background: #FFFFFF; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0F766E; font-size: 14px; font-weight: 700">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg>
+      <span>ホーム</span>
+    </button>
+    <button aria-label="記録" style="flex: 1; border: none; background: #FFFFFF; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #666666; font-size: 14px">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>
+      <span>記録</span>
+    </button>
+    <button aria-label="設定" style="flex: 1; border: none; background: #FFFFFF; font-family: inherit; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #666666; font-size: 14px">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+      <span>設定</span>
+    </button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: flex-end">
+  <button onClick="{{closeMenu}}" aria-label="閉じる" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; border: none; background: rgba(34, 34, 34, 0.45); cursor: pointer"></button>
+  <div style="position: relative; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 24px; line-height: 1.3">年代を切り替える</h2>
+    <sc-for list="{{ages}}" as="a" hint-placeholder-count="4">
+      <button onClick="{{a.pickClose}}" aria-pressed="{{a.selected}}" style="height: 56px; box-sizing: border-box; border-radius: 16px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-family: inherit; font-size: 16px; color: #222222; cursor: pointer; {{a.optStyle}}">
+        <span style="font-weight: 700">{{a.label}}</span>
+        <span style="font-size: 14px; color: #666666">{{a.focus}}</span>
+      </button>
+    </sc-for>
+    <p style="margin: 0; font-size: 14px; color: #666666">切り替えると出題と難しさの初期値が変わります。プレイ中は成績に合わせて自動で調整されます。</p>
+    <button onClick="{{closeMenu}}" style="height: 48px; border-radius: 24px; border: 2px solid #0F766E; background: #FFFFFF; color: #0F766E; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer">閉じる</button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPlay}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+  <div style="height: 56px; padding: 0 12px 0 8px; display: flex; align-items: center; justify-content: space-between">
+    <button onClick="{{quit}}" aria-label="やめる" style="width: 44px; height: 44px; border: none; background: #FFFFFF; border-radius: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <span style="font-weight: 700">{{round}} / {{total}}</span>
+    <span style="font-size: 14px; color: #666666">制限 {{cur.limit}}秒</span>
+  </div>
+  <div style="padding: 0 20px; display: flex; gap: 4px">
+    <sc-for list="{{segs}}" as="sg" hint-placeholder-count="6">
+      <div style="flex: 1; height: 8px; border-radius: 4px; {{sg.style}}"></div>
+    </sc-for>
+  </div>
+  <div style="flex: 1; min-height: 0; padding: 16px 20px 24px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <h2 style="margin: 0; font-size: 24px; line-height: 1.3">中央の図形はどっち?</h2>
+      <span style="font-size: 14px; color: #666666">周りの点の動きにも目を向けましょう</span>
+    </div>
+    <div style="height: 330px; box-sizing: border-box; border: 2px solid #E3F3F1; border-radius: 24px; display: flex; align-items: center; justify-content: center">
+      <div style="position: relative; width: 300px; height: 300px">
+        <sc-for list="{{markers}}" as="m" hint-placeholder-count="8">
+          <div style="position: absolute; width: 28px; height: 28px; border-radius: 14px; {{m.style}}"></div>
+        </sc-for>
+        <div style="position: absolute; left: 106px; top: 106px; width: 88px; height: 88px; display: flex; align-items: center; justify-content: center">
+          <sc-if value="{{isCircle}}" hint-placeholder-val="{{true}}">
+            <div style="width: 88px; height: 88px; border-radius: 44px; background: #0F766E"></div>
+          </sc-if>
+          <sc-if value="{{isSquare}}" hint-placeholder-val="{{false}}">
+            <div style="width: 88px; height: 88px; border-radius: 14px; background: #0F766E"></div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="font-size: 14px; color: #666666">のこり</span>
+      <div style="flex: 1; height: 10px; border-radius: 5px; background: #E3F3F1; overflow: hidden"><div style="width: 62%; height: 100%; background: #0F766E; border-radius: 5px"></div></div>
+    </div>
+    <div style="display: flex; gap: 12px">
+      <button onClick="{{answerCircle}}" style="flex: 1; height: 72px; border-radius: 20px; border: 3px solid #0F766E; background: #FFFFFF; color: #222222; font-family: inherit; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0F766E" stroke-width="3"><circle cx="14" cy="14" r="10"/></svg>
+        <span>丸</span>
+      </button>
+      <button onClick="{{answerSquare}}" style="flex: 1; height: 72px; border-radius: 20px; border: 3px solid #0F766E; background: #FFFFFF; color: #222222; font-family: inherit; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0F766E" stroke-width="3"><rect x="4" y="4" width="20" height="20" rx="3"/></svg>
+        <span>四角</span>
+      </button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{isResult}}" hint-placeholder-val="{{false}}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column">
+  <div style="height: 56px; padding: 0 8px; display: flex; align-items: center">
+    <button onClick="{{quit}}" aria-label="ホームへ戻る" style="width: 44px; height: 44px; border: none; background: #FFFFFF; border-radius: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer">
+      <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#222222" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div style="flex: 1; min-height: 0; padding: 0 20px 24px; display: flex; flex-direction: column; gap: 16px">
+    <h1 style="margin: 0; font-size: 32px; line-height: 1.25">おつかれさま</h1>
+    <div style="border-radius: 24px; background: #E3F3F1; padding: 20px; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 14px; color: #666666">正解した数</span>
+      <span style="font-size: 32px; font-weight: 700; color: #0F766E; line-height: 1.2">{{score}} / {{total}}</span>
+      <div style="height: 12px; border-radius: 6px; background: #FFFFFF; overflow: hidden"><div style="height: 100%; border-radius: 6px; background: #0F766E; width: {{accPct}}%"></div></div>
+    </div>
+    <div style="border: 2px solid #E3F3F1; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; justify-content: space-between"><span>正確さ</span><span style="font-weight: 700">{{accPct}}%</span></div>
+        <div style="height: 8px; border-radius: 4px; background: #E3F3F1; overflow: hidden"><div style="height: 100%; background: #0F766E; width: {{accPct}}%"></div></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; justify-content: space-between"><span>反応の速さ</span><span style="font-weight: 700">70%</span></div>
+        <div style="height: 8px; border-radius: 4px; background: #E3F3F1; overflow: hidden"><div style="width: 70%; height: 100%; background: #0F766E"></div></div>
+      </div>
+    </div>
+    <div style="border-radius: 16px; background: #FDEAE4; padding: 12px 16px; display: flex; flex-direction: column">
+      <span style="font-size: 14px; font-weight: 700">次の目標</span>
+      <span style="font-size: 14px; color: #666666">あと2日続けると、1週間連続になります。</span>
+    </div>
+    <p style="margin: 0; font-size: 14px; color: #666666">結果は目安です。診断や治療を目的としたものではありません。</p>
+    <div style="flex: 1"></div>
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <button onClick="{{start}}" style="height: 56px; border: none; border-radius: 28px; background: #0F766E; color: #FFFFFF; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer">もう一度</button>
+      <button onClick="{{quit}}" style="height: 56px; border-radius: 28px; border: 2px solid #0F766E; background: #FFFFFF; color: #0F766E; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer">ホームへ</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { screen: 'select', age: '40', menu: false, round: 1, score: 0 };
+  }
+  renderVals() {
+    const AGES = [
+      { id: '10', num: '10', label: '10代', focus: '実行機能・注意', blurb: 'テンポよくルールを切り替える', minutes: 5, rounds: 8, limit: 3, body: 16,
+        tags: ['実行機能', '注意'],
+        games: [{ name: 'ルール切替ダッシュ', fn: '実行機能', min: 2 }, { name: 'ストップ&ゴー', fn: '抑制', min: 1 }, { name: 'ひらめきタップ', fn: '注意', min: 2 }],
+        extraTitle: '今週のランキング', extraBody: '12位 ・ 連続3日' },
+      { id: '20', num: '20', label: '20代', focus: 'ワーキングメモリ・注意', blurb: '覚えて、操作して、素早く反応', minutes: 5, rounds: 8, limit: 3, body: 16,
+        tags: ['ワーキングメモリ', '注意'],
+        games: [{ name: 'ナンバーバック', fn: 'ワーキングメモリ', min: 2 }, { name: '位置おぼえ', fn: 'ワーキングメモリ', min: 2 }, { name: '反応タップ', fn: '注意', min: 1 }],
+        extraTitle: '友だちと比べる', extraBody: '今週は3人が挑戦中' },
+      { id: '30', num: '30', label: '30代', focus: '実行機能・処理速度', blurb: '同時に判断する力を伸ばす', minutes: 7, rounds: 6, limit: 4, body: 16,
+        tags: ['実行機能', '処理速度'],
+        games: [{ name: 'ダブルタスク', fn: '実行機能', min: 3 }, { name: '切替ミックス', fn: '実行機能', min: 2 }, { name: '素早く判断', fn: '処理速度', min: 2 }],
+        extraTitle: 'すきま3分モード', extraBody: '通勤や休憩の合間にすぐ始められます' },
+      { id: '40', num: '40', label: '40代', focus: '処理速度・視覚注意', blurb: '視野を広げて素早く判断', minutes: 8, rounds: 6, limit: 4, body: 18,
+        tags: ['処理速度', '視覚注意'],
+        games: [{ name: '周辺ターゲット判断', fn: '視覚注意', min: 3 }, { name: '素早く判断', fn: '処理速度', min: 3 }, { name: 'ルール切替', fn: '実行機能', min: 2 }],
+        extraTitle: '週のふりかえり', extraBody: '今週は4日トレーニングしました' }
+    ];
+    const s = this.state;
+    const cur = AGES.find((a) => a.id === s.age) || AGES[3];
+    const total = cur.rounds;
+    const ages = AGES.map((a) => {
+      const sel = a.id === s.age;
+      return {
+        ...a,
+        selected: sel,
+        cardStyle: sel ? 'border: 3px solid #0F766E; background: #E3F3F1;' : 'border: 3px solid #E3F3F1; background: #FFFFFF;',
+        optStyle: sel ? 'border: 2px solid #0F766E; background: #E3F3F1;' : 'border: 2px solid #E3F3F1; background: #FFFFFF;',
+        pick: () => this.setState({ age: a.id }),
+        pickClose: () => this.setState({ age: a.id, menu: false })
+      };
+    });
+    const segs = Array.from({ length: total }, (_, i) => ({
+      style: 'background: ' + (i < s.round - 1 ? '#0F766E' : (i === s.round - 1 ? '#E0603A' : '#E3F3F1')) + ';'
+    }));
+    const target = (s.round * 3) % 8;
+    const markers = Array.from({ length: 8 }, (_, i) => {
+      const th = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+      const x = 150 + 118 * Math.cos(th) - 14;
+      const y = 150 + 118 * Math.sin(th) - 14;
+      return { style: 'left: ' + x.toFixed(1) + 'px; top: ' + y.toFixed(1) + 'px; background: ' + (i === target ? '#E0603A' : '#E3F3F1') + ';' };
+    });
+    const answer = (choseCircle) => () => {
+      const st = this.state;
+      const correct = (st.round % 2 === 1) === choseCircle;
+      const score = st.score + (correct ? 1 : 0);
+      if (st.round >= total) this.setState({ score: score, screen: 'result' });
+      else this.setState({ score: score, round: st.round + 1 });
+    };
+    return {
+      isSelect: s.screen === 'select',
+      isHome: s.screen === 'home',
+      isPlay: s.screen === 'play',
+      isResult: s.screen === 'result',
+      menuOpen: s.screen === 'home' && s.menu,
+      ages: ages,
+      cur: cur,
+      bodyPx: cur.body,
+      tags: cur.tags.map((t) => ({ t: t })),
+      games: cur.games.map((g, i) => ({ ...g, n: i + 1 })),
+      round: s.round,
+      total: total,
+      score: s.score,
+      accPct: Math.round((s.score / total) * 100),
+      isCircle: s.round % 2 === 1,
+      isSquare: s.round % 2 === 0,
+      segs: segs,
+      markers: markers,
+      goHome: () => this.setState({ screen: 'home', menu: false }),
+      openMenu: () => this.setState({ menu: true }),
+      closeMenu: () => this.setState({ menu: false }),
+      start: () => this.setState({ screen: 'play', round: 1, score: 0, menu: false }),
+      quit: () => this.setState({ screen: 'home', menu: false }),
+      answerCircle: answer(true),
+      answerSquare: answer(false)
+    };
+  }
+}
+</script>
+</body>
+</html>
