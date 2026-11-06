@@ -3,7 +3,7 @@ const BASE = require('path').resolve(__dirname, '..');
 (async()=>{
  const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:390,height:844}});const p=await ctx.newPage();
  const errs=[],ext=[];p.on('pageerror',e=>errs.push(e.message));p.on('request',r=>{if(!/^(file:|data:|blob:|about:)/.test(r.url()))ext.push(r.url())});
- await p.goto('file://'+BASE+'/prototype/brain_dojo_v4.html');
+ await p.goto('file://'+BASE+'/prototype/brain_dojo_v5.html');
  const out={};
  const names=async()=>p.$$eval('.stack8:nth-of-type(1) .rows:first-of-type .row b, .rows .row b',e=>e.map(x=>x.textContent));
  for(const age of ['10','20','30','40']){
