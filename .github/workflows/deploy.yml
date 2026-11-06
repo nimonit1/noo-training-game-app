@@ -1,0 +1,56 @@
+# main ブランチへの push(= PR のマージ)をきっかけに、GitHub Pages へ自動デプロイする。
+# 外部サービスへの送信なし。GitHub 標準の Pages 機能のみを使う(シークレット不要)。
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 手動実行も可能
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時に複数のデプロイを走らせない(新しいものを優先)
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run test:menu
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 公開用ファイルを組み立てる(最新版を index.html にする)
+        run: |
+          mkdir -p _site
+          latest=$(ls prototype/brain_dojo_v*.html | sort -V | tail -n 1)
+          echo "最新版: $latest"
+          cp "$latest" _site/index.html
+          cp prototype/brain_dojo_v*.html _site/
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

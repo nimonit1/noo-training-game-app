@@ -88,6 +88,17 @@ npm run test:menu   # 年代ごとのおすすめ目的、目的の切替と保�
 - プロトタイプは「一般テーマ」(プライマリ `#0F766E`、セカンダリ `#E0603A`、白背景、本文 `#222222`、補足 `#666666`、赤 `#B71C1C`)。
 - 詳細なルールは DESIGN.md の「4.1 ユーザーの設計ルール」にあります。
 
+## デプロイ(GitHub Pages)
+
+`main` ブランチに PR をマージすると、GitHub Actions(`.github/workflows/deploy.yml`)が自動で次を行います。
+
+1. Playwright のテスト(`npm test` / `npm run test:menu`)を実行
+2. 成功したら、`prototype/` の最新版(番号が最大の `brain_dojo_v*.html`)を `index.html` として GitHub Pages に公開
+
+- 初回のみ、GitHub のリポジトリ設定 **Settings → Pages → Source を「GitHub Actions」** に変更してください。
+- 公開される URL は、通常 `https://<ユーザー名>.github.io/noo-training-game-app/` です。
+- 外部サービスへの通信やシークレットは使いません。手動実行は Actions タブの「Run workflow」から行えます。
+
 ## ライセンス
 
 [MIT License](./LICENSE)
