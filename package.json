@@ -1,0 +1,14 @@
+{
+  "name": "noo-training-game-app",
+  "version": "0.3.0",
+  "private": true,
+  "description": "脳トレ道場 — 脳トレゲームアプリのプロトタイプと検証スクリプト",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/test_all_games.js",
+    "test:menu": "node tests/test_goal_menu.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  }
+}
