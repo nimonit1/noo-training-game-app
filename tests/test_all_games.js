@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const BASE = require('path').resolve(__dirname, '..');
-const URL = 'file://' + BASE + '/prototype/brain_dojo_v6.html';
+const URL = 'file://' + BASE + '/prototype/brain_dojo_v7.html';
 const SHOT = BASE + '/tests/shots/';
 fs.mkdirSync(SHOT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -36,6 +36,9 @@ const stepFn = (bad) => {
   switch (g) {
     case 'switch': { const w = p.want; q('#a' + (bad ? (w === 'L' ? 'R' : 'L') : w)).click(); return { s: 'act', g }; }
     case 'compare': { const w = p.want; q('[data-a=' + (bad ? (w === 'L' ? 'R' : 'L') : w) + ']').click(); return { s: 'act', g }; }
+    case 'stroop': { const w = p.want; const o = ['red','blue','green','purple'].filter(x => x !== w)[0]; q('.ans[data-a=' + (bad ? o : w) + ']').click(); return { s: 'act', g }; }
+    case 'schulte': { q('.cell[data-n="' + p.next + '"]').click(); return { s: 'act', g }; }
+    case 'picmem': { if (!p.canAns) return { s: 'wait', g, p }; const yes = bad ? !p.old : p.old; q('[data-a=' + (yes ? 'yes' : 'no') + ']').click(); return { s: 'act', g }; }
     case 'gonogo': { if (p.active && p.go) { q('#tap').click(); return { s: 'act', g }; } return { s: 'wait', g, p }; }
     case 'oddone': { q('.cell[data-i="' + p.target + '"]').click(); return { s: 'act', g }; }
     case 'nback': { if (!p.canAns) return { s: 'wait', g, p }; const same = bad ? !p.match : p.match; q('[data-a=' + (same ? 'same' : 'diff') + ']').click(); return { s: 'act', g }; }
@@ -113,7 +116,7 @@ async function playOne(browser, g, bad, shotName) {
   }
 
   // ---- 2. 全ゲームを並列で完走(完璧なボット) ----
-  const games = ['switch','gonogo','oddone','nback','span','spanrev','ufov','dual','compare'];
+  const games = ['switch','gonogo','oddone','nback','span','spanrev','ufov','dual','compare','stroop','schulte','picmem'];
   const t1 = Date.now();
   const perfect = await Promise.all(games.map(g => playOne(browser, g, false, 'g_' + g).catch(e => ({ error: String(e) }))));
   report.perfectSecs = Math.round((Date.now() - t1) / 1000);
@@ -121,9 +124,9 @@ async function playOne(browser, g, bad, shotName) {
   games.forEach((g, i) => { const x = perfect[i]; report.perfect[g] = x.error ? x : { screen: x.screen, correct: x.r.correct, total: x.r.total, score: x.r.score, lv: x.r.lvBefore + '->' + x.r.lvAfter, plays: x.plays, newBest: x.r.newBest, avgRT: x.r.avgRT && Math.round(x.r.avgRT), lines: x.r.lines.map(l => l.l + '=' + l.v).join(' / '), resultText: x.hasText }; });
 
   // ---- 3. わざと全部まちがえるボット(レベル低下・得点0の確認) ----
-  const bad = await Promise.all(['compare', 'switch', 'nback'].map(g => playOne(browser, g, true, 'bad_' + g).catch(e => ({ error: String(e) }))));
+  const bad = await Promise.all(['compare', 'switch', 'nback', 'stroop', 'picmem'].map(g => playOne(browser, g, true, 'bad_' + g).catch(e => ({ error: String(e) }))));
   report.bad = {};
-  ['compare', 'switch', 'nback'].forEach((g, i) => { const x = bad[i]; report.bad[g] = x.error ? x : { correct: x.r.correct, total: x.r.total, score: x.r.score, lv: x.r.lvBefore + '->' + x.r.lvAfter }; });
+  ['compare', 'switch', 'nback', 'stroop', 'picmem'].forEach((g, i) => { const x = bad[i]; report.bad[g] = x.error ? x : { correct: x.r.correct, total: x.r.total, score: x.r.score, lv: x.r.lvBefore + '->' + x.r.lvAfter }; });
 
   // ---- 4. 画面遷移・保存・シート・リセット ----
   {

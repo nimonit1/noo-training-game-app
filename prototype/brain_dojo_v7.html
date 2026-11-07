@@ -1,0 +1,1082 @@
+<!--
+テーマ: 一般テーマ(primary #0F766E / secondary #E0603A / 白背景)
+改訂履歴
+| バージョン | 日付       | 変更概要                                                         | 理由                 |
+| v7         | 2026-11-07 | ゲームを3種追加(ストループ、数字順タップ、絵おぼえ。計12種)。目的ごとのメニューを組み替え、目的どうしのゲームの重なりを減らした | 目的を変えてもメニューが似て見える問題の解消(設計書 R2) |
+| v6         | 2026-11-07 | 結果・記録・設定画面の注意書きを統一。「診断や治療、認知症の予防を目的としたものではありません」を4か所すべてに入れた(設定画面だけにあった) | 画面ごとに注意書きの内容がばらついていたため(設計書 R1・R8) |
+| v5         | 2026-11-06 | 下部の表示崩れを修正。非表示のタブ枠が残ってボタンを隠していた問題を解消し、iPhone Safariの下部ツールバーにページが重ならないよう viewport-fit=cover を外した | 年代選択画面のボタンが下部で隠れ、ツールバーと重なったため |
+| v4         | 2026-11-06 | 画面サイズを修正。標準のviewport指定を追加(スマホで縮小表示される問題)。PCでは画面の高さいっぱいのアプリ枠にし、本文だけをスクロールさせる | 公開ページで縦長・小さく表示されたため |
+| v1         | 2026-11-03 | 初版。年代切替(10〜40代)、7種のミニゲーム、難易度の自動調整、記録・設定 | 動くプロトタイプの依頼 |
+| v2         | 2026-11-04 | 「目的で選ぶ」方式に変更。年代は初期レベルとおすすめ目的の初期値だけに使う。年代別の追加ブロックと別名ゲームを廃止 | 年代別の効果を裏づける根拠が弱いため、目的・苦手で選ぶ設計(案3)へ |
+| v3         | 2026-11-06 | メニュー構成を見直し。「逆順おぼえ」「ダブルタスク」を独立したゲームとして追加(計9種)。目的ごとのメニューを、その力を狙うゲームだけで構成 | v2のメニューに目的と関係の薄い穴埋めのゲームが入っていたため |
+外部通信: なし。CDN・外部フォント・API・解析を使いません。保存先は端末内のlocalStorageのみです。
+-->
+<title>脳トレ道場</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 構成: スマホ幅の1カラム。画面は #app に1つずつ描画し、下部タブでホーム/記録/設定を切り替える。
+   配色と文字はユーザー指定の「一般テーマ」で固定し、白背景の1テーマで提供する。 */
+:root{
+  --primary:#0F766E; --secondary:#E0603A; --light1:#E3F3F1; --light2:#FDEAE4;
+  --danger:#B71C1C; --text:#222222; --sub:#666666; --bg:#FFFFFF;
+  --font:'Segoe UI','Yu Gothic','游ゴシック','YuGothic','Hiragino Sans','Noto Sans JP',sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.5 var(--font);-webkit-text-size-adjust:100%}
+#root{max-width:480px;margin:0 auto;min-height:100%;min-height:100dvh;display:flex;flex-direction:column;position:relative;background:var(--bg)}
+/* PC・タブレットなど広い画面: 画面の高さいっぱいのアプリ枠にし、本文だけをスクロールさせる */
+@media (min-width:520px){
+  body{background:var(--light1);overflow:hidden}
+  #root{height:100%;height:100dvh;min-height:0;border-left:2px solid var(--light1);border-right:2px solid var(--light1);box-shadow:0 0 0 1px rgba(0,0,0,.04),0 8px 32px rgba(0,0,0,.12)}
+  #app{overflow-y:auto;min-height:0}
+  .tabs{position:static;flex:none}
+}
+h1{margin:0;font-size:32px;line-height:1.25;font-weight:700;text-wrap:balance}
+h2{margin:0;font-size:24px;line-height:1.3;font-weight:700;text-wrap:balance}
+h3{margin:0;font-size:16px;line-height:1.5;font-weight:700}
+p{margin:0}
+.sub{font-size:14px;color:var(--sub)}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;margin:0}
+button:focus-visible{outline:3px solid var(--secondary);outline-offset:2px}
+button:disabled{cursor:default}
+
+#app{flex:1;display:flex;flex-direction:column;min-width:0}
+.screen{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0;padding-block:8px 24px;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.stack8{display:flex;flex-direction:column;gap:8px}
+.grow{flex:1}
+.topbar{display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700}
+.logo{width:32px;height:32px;border-radius:16px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center}
+.agechip{height:44px;padding:0 14px;border-radius:22px;border:2px solid var(--primary);background:var(--light1);color:var(--primary);font-weight:700;display:flex;align-items:center;gap:6px}
+
+.btn{width:100%;height:56px;border:none;border-radius:28px;background:var(--primary);color:#fff;font-weight:700}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:var(--bg);color:var(--primary);border:2px solid var(--primary)}
+.btn.danger{background:var(--bg);color:var(--danger);border:2px solid var(--danger)}
+.btn[disabled]{background:var(--light1);color:var(--sub)}
+.iconbtn{width:44px;height:44px;border:none;background:transparent;border-radius:22px;display:flex;align-items:center;justify-content:center}
+.tag,.chipstatic{font-size:14px;font-weight:700;color:var(--primary);background:var(--bg);border:2px solid var(--primary);border-radius:16px;padding:0 12px;line-height:28px;white-space:nowrap}
+.chipstatic{align-self:flex-start;background:var(--light1)}
+.lvtag{font-size:14px;font-weight:700;color:var(--primary);background:var(--light1);border-radius:14px;padding:0 10px;line-height:28px;white-space:nowrap}
+.tagbest{align-self:flex-start;font-size:14px;font-weight:700;border:2px solid var(--secondary);background:var(--light2);color:var(--text);border-radius:16px;padding:0 12px;line-height:28px}
+
+/* 年代選択 */
+.agegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.agecard{position:relative;text-align:left;border-radius:24px;padding:16px;min-height:148px;display:flex;flex-direction:column;gap:4px;border:3px solid var(--light1);background:var(--bg)}
+.agecard.on{border-color:var(--primary);background:var(--light1)}
+.agenum{display:flex;align-items:baseline;gap:2px;color:var(--primary)}
+.agenum b{font-size:40px;line-height:1.1}
+.agenum span{font-size:16px;font-weight:700}
+.agefocus{font-size:14px;font-weight:700}
+.agecheck{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:14px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center}
+.note{display:flex;gap:8px;align-items:flex-start;color:var(--sub)}
+.note svg{flex:none;margin-top:2px}
+
+/* ホーム */
+.hero{position:relative;border-radius:24px;background:var(--light1);padding:20px;display:flex;flex-direction:column;gap:8px}
+.hero::after{content:"";position:absolute;top:20px;right:20px;width:48px;height:48px;border-radius:24px;background:var(--secondary)}
+.heromin{font-size:24px;font-weight:700;line-height:1.3}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.rows{display:flex;flex-direction:column;gap:8px}
+.row{width:100%;min-height:64px;border:2px solid var(--light1);border-radius:16px;background:var(--bg);padding:8px 16px;display:flex;align-items:center;gap:12px;text-align:left}
+.row:active{background:var(--light1)}
+.badge{width:36px;height:36px;border-radius:18px;background:var(--light1);color:var(--primary);font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.badge.done{background:var(--primary);color:#fff}
+.rowmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.rowmain b{line-height:1.3}
+.rowmeta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.extra{border-radius:16px;background:var(--light2);padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.extra b{font-size:14px}
+.dots{display:flex;gap:8px;align-items:center}
+.dot{width:16px;height:16px;border-radius:8px;border:2px solid var(--primary);background:var(--bg)}
+.dot.on{background:var(--primary)}
+.minibars{display:flex;gap:6px;align-items:flex-end;height:40px}
+.minibars i{flex:1;border-radius:4px;background:var(--bg);border:2px solid var(--primary);min-height:6px}
+.minibars i.on{background:var(--primary)}
+
+.tabs[hidden]{display:none}
+.tabs{position:sticky;bottom:0;display:flex;background:var(--bg);border-top:2px solid var(--light1);
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);z-index:5}
+.tab{flex:1;min-height:64px;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:14px;color:var(--sub)}
+.tab[aria-current=page]{color:var(--primary);font-weight:700}
+.tab[aria-current=page]::before{content:"";width:28px;height:4px;border-radius:2px;background:var(--secondary)}
+
+/* 記録・設定 */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{border-radius:16px;background:var(--light1);padding:12px;display:flex;flex-direction:column;gap:2px}
+.tile b{font-size:24px;line-height:1.3;color:var(--primary);font-variant-numeric:tabular-nums}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.wcol{display:flex;flex-direction:column;align-items:center;gap:4px}
+.wtrack{height:104px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.wbar{width:100%;max-width:28px;border-radius:8px 8px 4px 4px;background:var(--light1);min-height:6px}
+.wbar.on{background:var(--primary)}
+.wbar.today{outline:3px solid var(--secondary);outline-offset:1px}
+.table{border:2px solid var(--light1);border-radius:16px;overflow:hidden}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) 44px 60px 44px;gap:8px;padding:10px 12px;border-top:2px solid var(--light1);align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+.trow>span:not(:first-child){text-align:right}
+.trow.head{background:var(--primary);color:#fff;font-weight:700;border-top:none}
+.hrow{display:grid;grid-template-columns:44px minmax(0,1fr) 48px 56px;gap:8px;padding:8px 0;border-top:2px solid var(--light1);font-size:14px;font-variant-numeric:tabular-nums}
+.hrow>span:nth-child(3),.hrow>span:nth-child(4){text-align:right}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;border-bottom:2px solid var(--light1)}
+.switch{width:64px;height:36px;border-radius:18px;border:2px solid var(--primary);background:var(--bg);position:relative;padding:0;flex:none}
+.switch .knob{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:var(--primary);transition:transform .15s}
+.switch[aria-checked=true]{background:var(--light1)}
+.switch[aria-checked=true] .knob{transform:translateX(28px)}
+.card{border-radius:24px;background:var(--light1);padding:20px;display:flex;flex-direction:column;gap:8px}
+.card.plain{background:var(--bg);border:2px solid var(--light1);border-radius:16px;padding:16px}
+.how{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px}
+.bignum{font-size:32px;font-weight:700;color:var(--primary);line-height:1.2;font-variant-numeric:tabular-nums}
+.meter{height:12px;border-radius:6px;background:var(--bg);overflow:hidden}
+.meter>span{display:block;height:100%;background:var(--primary);border-radius:6px}
+.card.plain .meter{background:var(--light1)}
+.list{display:flex;flex-direction:column}
+.lrow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:2px solid var(--light1);font-variant-numeric:tabular-nums}
+.lrow:first-child{border-top:none}
+.lrow b{white-space:nowrap}
+.grow2{display:flex;flex-direction:column;gap:12px}
+
+/* シート(下から出る確認) */
+.layer{position:fixed;inset:0;z-index:20;display:flex;justify-content:center;align-items:flex-end}
+.scrim{position:absolute;inset:0;border:none;background:rgba(34,34,34,.45);padding:0;border-radius:0}
+.sheet{position:relative;width:100%;max-width:480px;background:var(--bg);border-radius:24px 24px 0 0;display:flex;flex-direction:column;gap:12px;max-height:90%;overflow:auto;
+  padding:20px max(20px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.opt{width:100%;height:56px;border-radius:16px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;border:2px solid var(--light1);background:var(--bg);text-align:left}
+.opt[aria-pressed=true]{border-color:var(--primary);background:var(--light1)}
+
+/* プレイ画面 */
+.playbar{display:flex;align-items:center;gap:12px;min-height:56px}
+.pbar{flex:1;height:10px;border-radius:5px;background:var(--light1);overflow:hidden}
+.pbar>span{display:block;height:100%;width:0;background:var(--primary);border-radius:5px;transition:width .25s}
+.ptitle{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.hint{font-size:14px;color:var(--sub);min-height:21px}
+.msg{min-height:32px;display:flex;align-items:center;gap:8px;font-weight:700}
+.msg.ok{color:var(--primary)}
+.msg.ng{color:var(--danger)}
+.msg.ok svg{animation:pop .3s}
+.msg.ng svg{animation:shake .3s}
+.board{position:relative;width:100%;max-width:360px;margin:0 auto}
+.timer{height:10px;border-radius:5px;background:var(--light1);overflow:hidden;width:100%;max-width:360px;margin:0 auto}
+.timer>span{display:block;height:100%;width:100%;background:var(--secondary);border-radius:5px}
+.controls{display:flex;gap:12px;width:100%;max-width:360px;margin:0 auto}
+.controls:empty{display:none}
+.ans{flex:1;min-width:0;height:72px;border-radius:20px;border:3px solid var(--primary);background:var(--bg);font-weight:700;font-size:20px;color:var(--text)}
+.ans:active{background:var(--light1)}
+.ans:disabled{border-color:var(--light1);color:var(--sub)}
+.tap{width:100%;height:96px;border:none;border-radius:28px;background:var(--primary);color:#fff;font-size:24px;font-weight:700}
+.tap:active{transform:scale(.98)}
+.stage{min-height:230px;border:2px solid var(--light1);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+.countdown{min-height:230px;display:flex;align-items:center;justify-content:center;border:2px solid var(--light1);border-radius:24px}
+.countdown span{font-size:96px;font-weight:700;color:var(--primary);line-height:1.1;animation:pop .5s}
+.cuepill{display:inline-flex;align-items:center;gap:8px;border-radius:20px;padding:0 16px;line-height:40px;font-size:24px;font-weight:700;border:3px solid var(--primary);background:var(--light1);color:var(--primary)}
+.cuepill.size{border-color:var(--secondary);background:var(--light2);color:var(--text)}
+.shapebox{height:140px;display:flex;align-items:center;justify-content:center}
+.digit{font-size:96px;font-weight:700;line-height:1.1;color:var(--primary);font-variant-numeric:tabular-nums;min-height:106px}
+.qlabel{font-size:24px;font-weight:700;line-height:1.3;text-align:center}
+.fix{font-size:32px;color:var(--sub)}
+.grid{display:grid;gap:6px}
+.cell{aspect-ratio:1;border:2px solid var(--light1);border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:0;min-width:0}
+.cell svg{width:70%;height:70%}
+.cell.good{border-color:var(--primary);background:var(--light1)}
+.cell.reveal{border:4px solid var(--secondary);background:var(--light2)}
+.ans2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
+.stword{font-size:72px;font-weight:700;line-height:1.2;min-height:90px;text-align:center}
+.cell.num{font-size:28px;font-weight:700;color:var(--primary)}
+.cell.num.done{background:var(--light1);border-color:var(--light1);color:var(--sub)}
+.pad{display:grid;gap:8px}
+.padc{aspect-ratio:1;border-radius:16px;border:2px solid var(--light1);background:var(--light1);padding:0;min-width:0}
+.padc.lit{background:var(--primary);border-color:var(--primary);transform:scale(1.04)}
+.padc.bad{border:4px solid var(--danger);background:var(--light2)}
+.locked .padc{pointer-events:none}
+.ring{position:relative;width:100%;aspect-ratio:1;border:2px solid var(--light1);border-radius:24px;overflow:hidden}
+.rp{position:absolute;transform:translate(-50%,-50%);width:11%;min-width:36px;aspect-ratio:1}
+.rp.ph{border-radius:50%;background:var(--light1);width:5%;min-width:12px}
+.rp.tgt{width:14%;min-width:40px}
+.mk{position:absolute;transform:translate(-50%,-50%);width:13%;min-width:40px;aspect-ratio:1;border-radius:6px;opacity:.7;
+  background:repeating-linear-gradient(45deg,#666666 0 2px,transparent 2px 7px)}
+.cshape{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14%;min-width:40px;aspect-ratio:1}
+.fixc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:32px;color:var(--sub);line-height:1}
+.cbtns{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px}
+.cbtn{width:76px;height:52px;border-radius:16px;border:3px solid var(--primary);background:var(--bg);font-weight:700;padding:0}
+.cbtn[aria-pressed=true]{background:var(--primary);color:#fff}
+.rbtn{position:absolute;transform:translate(-50%,-50%);width:14%;min-width:44px;aspect-ratio:1;border-radius:50%;border:3px solid var(--primary);background:var(--bg);padding:0;display:flex;align-items:center;justify-content:center}
+.rbtn::after{content:"";width:35%;height:35%;border-radius:50%;background:var(--light1)}
+.rbtn[aria-pressed=true]{background:var(--primary)}
+.rbtn[aria-pressed=true]::after{background:#fff}
+.rbtn.reveal{border-color:var(--secondary);box-shadow:0 0 0 4px var(--light2)}
+
+@keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){
+  .msg svg,.countdown span{animation:none!important}
+  .pbar>span,.switch .knob{transition:none!important}
+}
+</style>
+
+<div id="root">
+  <main id="app"></main>
+  <nav id="tabs" class="tabs" aria-label="メイン" hidden></nav>
+  <div id="layer"></div>
+</div>
+<noscript><p style="padding:16px">このアプリはJavaScriptが必要です。</p></noscript>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= 共通 ================= */
+const $=(s,el)=>(el||document).querySelector(s);
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:null;
+const now=()=>performance.now();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function ymd(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+const P={
+  check:'<circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-7"/>',
+  cross:'<circle cx="12" cy="12" r="10"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>',
+  tick:'<path d="M5 12l5 5 9-10"/>',
+  close:'<path d="M6 6l12 12M18 6L6 18"/>',
+  down:'<path d="M6 9l6 6 6-6"/>',
+  right:'<path d="M9 6l6 6-6 6"/>',
+  home:'<path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
+  chart:'<path d="M5 20V10M12 20V4M19 20v-7"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V4a3 3 0 0 0-3 0z"/><path d="M15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>'
+};
+function ic(n,s,w){return '<svg aria-hidden="true" width="'+(s||24)+'" height="'+(s||24)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(w||2)+'" stroke-linecap="round" stroke-linejoin="round">'+P[n]+'</svg>';}
+
+/* ================= 保存 ================= */
+const SAVE_KEY='brainDojo_v1';
+function defaults(){return {age:null,goal:null,sound:false,days:{},best:{},level:{},plays:{},history:[]};}
+function load(){
+  try{const r=localStorage.getItem(SAVE_KEY);if(r){const o=JSON.parse(r);if(o&&typeof o==='object')return Object.assign(defaults(),o);}}catch(e){}
+  return defaults();
+}
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}}
+let save=load();
+
+/* ================= 定義 ================= */
+const GAME={
+  switch :{canon:'ルール切替',fn:'実行機能',est:55},
+  gonogo :{canon:'ストップ&ゴー',fn:'抑制',est:45},
+  oddone :{canon:'ひらめきタップ',fn:'注意',est:50},
+  nback  :{canon:'ナンバーバック',fn:'ワーキングメモリ',est:50},
+  span   :{canon:'位置おぼえ',fn:'ワーキングメモリ',est:55},
+  ufov   :{canon:'周辺ターゲット判断',fn:'視覚注意・処理速度',est:60},
+  compare:{canon:'素早く判断',fn:'処理速度',est:45},
+  spanrev:{canon:'逆順おぼえ',fn:'ワーキングメモリ',est:60,eng:'span',opt:{rev:true}},
+  dual   :{canon:'ダブルタスク',fn:'注意の分配',est:60,eng:'ufov',opt:{dist:true}},
+  stroop :{canon:'ストループ',fn:'抑制・実行機能',est:55},
+  schulte:{canon:'数字順タップ',fn:'視覚探索・注意',est:60},
+  picmem :{canon:'絵おぼえ',fn:'視覚記憶',est:55}
+};
+const ORDER=['switch','gonogo','stroop','oddone','schulte','nback','span','spanrev','picmem','ufov','dual','compare'];
+const engOf=g=>GAME[g].eng||g;
+const optOf=it=>Object.assign({},GAME[it.g].opt||{},it);
+/* 年代は「初期レベル」と「おすすめ目的の初期値」にだけ使う。遊べるゲームは制限しない。 */
+const AGES={
+  '10':{label:'10代',goal:'control',lv:2,hint:'はじめはやさしめから'},
+  '20':{label:'20代',goal:'memory',lv:3,hint:'ふつうの難しさから'},
+  '30':{label:'30代',goal:'mix',lv:3,hint:'ふつうの難しさから'},
+  '40':{label:'40代',goal:'speed',lv:3,hint:'ふつうの難しさから'}
+};
+/* 目的ごとのメニュー。力と手法の対応は目安で、日常の能力が上がると保証するものではない。 */
+const GOALS={
+  speed  :{label:'素早さ',blurb:'見て、すぐ判断する',tags:['処理速度','視覚注意'],menu:['compare','ufov','oddone']},
+  memory :{label:'記憶',blurb:'覚えて、頭の中で操作する',tags:['ワーキングメモリ'],menu:['picmem','span','nback']},
+  focus  :{label:'集中',blurb:'探して、見分けて、同時に見る',tags:['注意','視覚注意'],menu:['schulte','oddone','dual']},
+  control:{label:'切替・がまん',blurb:'ルールを切り替え、がまんする',tags:['実行機能','抑制'],menu:['gonogo','stroop','switch']},
+  mix    :{label:'おまかせ',blurb:'いろいろな力を少しずつ',tags:['バランス'],menu:['switch','nback','compare']}
+};
+const GOAL_ORDER=['speed','memory','focus','control','mix'];
+function goalKey(){return (save.goal&&GOALS[save.goal])?save.goal:AGES[save.age].goal;}
+function menuNow(){return GOALS[goalKey()].menu.map(g=>({g:g,n:GAME[g].canon}));}
+if(save.age&&!AGES[save.age])save.age=null;
+
+function howto(g0,lv,opt){
+  const g=engOf(g0);
+  switch(g){
+    case 'switch':return ['画面の合図が「形」なら、丸か四角を答えます。','合図が「大きさ」なら、大きいか小さいかを答えます。','合図は途中で切り替わります。制限時間内に答えましょう。'];
+    case 'gonogo':return ['丸が出たら、すぐに「タップ」を押します。','四角が出たら、がまんします。押してはいけません。','速さと、がまんの両方が大切です。'];
+    case 'oddone':return ['三角がたくさん並びます。','1つだけ向きがちがう三角をタップします。','制限時間内に見つけましょう。'];
+    case 'nback':{const n=lv<=3?1:lv<=6?2:3;return ['数字が1つずつ出ます。','いま出ている数字が、'+n+'つ前の数字と同じなら「同じ」、ちがえば「ちがう」を押します。','最初の'+n+'個は答えずに、覚えるだけです。'];}
+    case 'span':return opt&&opt.rev?['マスが順番に光ります。','光った順番を覚えます。','光り終わったら、さかさまの順番(最後に光ったマスから)でタップします。','成功すると長く、失敗すると短くなります。']:['マスが順番に光ります。','光った順番を覚えます。','光り終わったら、同じ順番でタップします。','成功すると長く、失敗すると短くなります。'];
+    case 'ufov':return ['ほんの一瞬、中央に丸か四角、まわりに◆(ひし形)が出ます。'+(opt&&opt.dist||lv>=4?'まわりにはじゃまな三角も出ます。':''),'中央の形と、◆があった場所を両方答えます。','両方合っていると正解。だんだん表示が短くなります。'];
+    case 'compare':return [lv<=3?'数字が出ます。5より大きいか小さいかを答えます。':'数字が出ます。基準の数より大きいか小さいかを答えます。','制限時間は、成績に合わせて変わります。'];
+    case 'stroop':return ['色のついた文字が出ます。','文字の「意味」ではなく、文字についている「色」を答えます。例: 赤い色で「あお」と書かれていたら、答えは「あか」です。','レベルが上がると、意味と色がちがう問題が増え、制限時間も短くなります。'];
+    case 'schulte':return ['数字がばらばらに並びます。','1から順番に、小さい数字からタップします。','制限時間内に、最後まで見つけましょう。まちがえてタップすると、成績が下がります。'];
+    case 'picmem':return ['いくつかの絵が表示されます。消えるまでに覚えましょう。','そのあと、絵が1つずつ出ます。さっきの中にあった絵なら「あった」、なければ「なかった」を押します。','レベルが上がると、覚える絵の数が増えます。'];
+  }
+  return [];
+}
+
+/* ================= 状態 ================= */
+const ui={screen:save.age?'home':'select',pendingAge:null,session:null,game:null,sheet:null,curLevel:1};
+const lvOf=g=>(save.level[g]!=null?save.level[g]:AGES[save.age].lv);
+const today=()=>ymd();
+const playedToday=g=>save.history.some(h=>h.d===today()&&h.g===g);
+function streakInfo(){
+  const d=new Date();let s=0;const tt=!!save.days[ymd(d)];
+  if(!tt)d.setDate(d.getDate()-1);
+  while(save.days[ymd(d)]){s++;d.setDate(d.getDate()-1);}
+  return {streak:s,trainedToday:tt};
+}
+function goalText(s){
+  if(s===0)return '今日から1週間連続を目指そう';
+  const t=(Math.floor(s/7)+1)*7;return 'あと'+(t-s)+'日続けると'+(t/7)+'週間連続';
+}
+const WD=['日','月','火','水','木','金','土'];
+function weekData(){
+  const out=[];
+  for(let k=6;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);out.push({label:WD[d.getDay()],count:save.days[ymd(d)]||0,today:k===0});}
+  return out;
+}
+const weekDays=()=>weekData().filter(x=>x.count>0).length;
+const totalPlays=()=>Object.keys(save.plays).reduce((s,k)=>s+save.plays[k],0);
+const bestTotal=()=>Object.keys(save.best).reduce((s,k)=>s+save.best[k],0);
+
+/* ================= 音 ================= */
+let actx=null;
+function beep(ok){
+  if(!save.sound)return;
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime,dur=ok?0.1:0.2;
+    o.type='sine';o.frequency.value=ok?880:200;
+    g.gain.setValueAtTime(0.06,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+    o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+dur);
+  }catch(e){}
+}
+
+/* ================= テンプレート ================= */
+function tplSelect(){
+  const sel=ui.pendingAge;
+  const cards=Object.keys(AGES).map(k=>{
+    const a=AGES[k],on=sel===k;
+    return '<button class="agecard'+(on?' on':'')+'" data-act="pick-age" data-v="'+k+'" aria-pressed="'+on+'">'+
+      '<span class="agenum"><b>'+k+'</b><span>代</span></span>'+
+      '<span class="agefocus">おすすめ: '+esc(GOALS[a.goal].label)+'</span>'+
+      '<span class="sub">'+esc(a.hint)+'</span>'+
+      (on?'<span class="agecheck">'+ic('tick',16,3)+'</span>':'')+'</button>';
+  }).join('');
+  return '<section class="screen">'+
+    '<div class="topbar"><div class="brand"><span class="logo">'+ic('brain',20)+'</span><span>脳トレ道場</span></div></div>'+
+    '<div class="stack8"><h1>あなたの年代は?</h1><p class="sub">年代は、はじめの難しさと、おすすめの目的に使います。遊べるゲームは制限されません。目的はあとから自由に選べます。</p></div>'+
+    '<div class="agegrid">'+cards+'</div>'+
+    '<div class="note">'+ic('lock',20)+'<p class="sub">生年月日は聞きません。選んだ内容はこの端末の中だけで使います。外部には送信しません。</p></div>'+
+    '<div class="grow"></div>'+
+    '<button class="btn" data-act="age-confirm"'+(sel?'':' disabled')+'>'+(sel?'はじめる':'年代を選んでください')+'</button></section>';
+}
+
+function tplExtra(menu){
+  const w=weekData(),bars=w.map(x=>'<i class="'+(x.count>0?'on':'')+'" style="height:'+(6+Math.min(x.count,3)*11)+'px"></i>').join('');
+  const secs=menu.slice(0,2).reduce((s,m)=>s+GAME[m.g].est+20,0),mins=Math.round(secs/60);
+  return '<div class="extra"><b>週のふりかえり</b><span>直近7日で'+weekDays()+'日トレーニングしました</span><div class="minibars" role="img" aria-label="直近7日の記録">'+bars+'</div>'+
+    '<button class="btn ghost" data-act="start-quick" style="height:48px;margin-top:4px">すきま'+mins+'分だけやる</button></div>';
+}
+
+function rowBtn(m,i,done,showNum){
+  const lv=lvOf(m.g);
+  return '<button class="row" data-act="play" data-g="'+m.g+'" data-n="'+esc(m.n)+'" data-dist="'+(m.dist?1:0)+'">'+
+    '<span class="badge'+(done?' done':'')+'">'+(done?ic('tick',18,3):(showNum?(i+1):''))+'</span>'+
+    '<span class="rowmain"><b>'+esc(m.n)+'</b><span class="sub">'+esc(GAME[m.g].fn)+(done?' ・ 今日済み':'')+'</span></span>'+
+    '<span class="rowmeta"><span class="sub">約'+GAME[m.g].est+'秒</span><span class="lvtag">Lv'+lv+'</span></span>'+ic('right',20)+'</button>';
+}
+
+function tplHome(){
+  const a=AGES[save.age],st=streakInfo(),gk=goalKey(),gl=GOALS[gk],menu=menuNow();
+  const done=menu.filter(m=>playedToday(m.g)).length;
+  const secs=menu.reduce((s,m)=>s+GAME[m.g].est+20,0),mins=Math.ceil(secs/60);
+  const inMenu=menu.map(m=>m.g);
+  const others=ORDER.filter(g=>inMenu.indexOf(g)<0).map(g=>({g:g,n:GAME[g].canon}));
+  return '<section class="screen">'+
+    '<div class="topbar"><div class="brand"><span class="logo">'+ic('brain',20)+'</span><span>脳トレ道場</span></div>'+
+    '<button class="agechip" data-act="open-age" aria-label="年代を変える(いま'+a.label+')"><span>'+a.label+'</span>'+ic('down',18,3)+'</button></div>'+
+    '<button class="agechip" data-act="open-goal" aria-label="目的を変える(いま'+esc(gl.label)+')" style="justify-content:space-between;width:100%"><span>目的: '+esc(gl.label)+'</span>'+ic('down',18,3)+'</button>'+
+    '<div class="hero"><span class="sub">今日のトレーニング</span><span class="heromin">約'+mins+'分で完了</span><span class="sub">'+esc(gl.blurb)+'</span>'+
+      '<div class="tags">'+gl.tags.map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>'+
+      '<span class="sub">今日 '+done+' / '+menu.length+' 完了 ・ 連続'+st.streak+'日 ・ '+esc(goalText(st.streak))+'</span>'+
+      '<button class="btn" data-act="start-session" style="margin-top:4px">'+(done>=menu.length?'もう一度やる':'スタート')+'</button></div>'+
+    '<div class="stack8"><h2>今日のメニュー</h2><div class="rows">'+menu.map((m,i)=>rowBtn(m,i,playedToday(m.g),true)).join('')+'</div></div>'+
+    tplExtra(menu)+
+    '<div class="stack8"><h2>ほかのゲーム</h2><div class="rows">'+others.map((m,i)=>rowBtn(m,i,playedToday(m.g),false)).join('')+'</div></div>'+
+    '</section>';
+}
+
+function tplRecords(){
+  const st=streakInfo(),w=weekData(),tp=totalPlays();
+  const wk=w.map(x=>'<div class="wcol" role="img" aria-label="'+x.label+'曜日 '+x.count+'回"><span class="sub">'+(x.count||'')+'</span><div class="wtrack"><div class="wbar'+(x.count>0?' on':'')+(x.today?' today':'')+'" style="height:'+(6+Math.min(x.count,6)*15)+'px"></div></div><span class="sub"'+(x.today?' style="color:var(--primary);font-weight:700"':'')+'>'+x.label+'</span></div>').join('');
+  const rows=ORDER.map(g=>'<div class="trow"><span>'+esc(GAME[g].canon)+'</span><span>Lv'+lvOf(g)+'</span><span>'+(save.best[g]?save.best[g]+'点':'—')+'</span><span>'+(save.plays[g]||0)+'回</span></div>').join('');
+  const hist=save.history.slice(0,8).map(h=>{const p=h.d.split('-');return '<div class="hrow"><span>'+parseInt(p[1],10)+'/'+parseInt(p[2],10)+'</span><span>'+esc(h.n)+'</span><span>'+h.acc+'%</span><span>'+h.s+'点</span></div>';}).join('');
+  return '<section class="screen">'+
+    '<div class="topbar"><h1>記録</h1></div>'+
+    '<div class="tiles"><div class="tile"><span class="sub">連続日数</span><b>'+st.streak+'日</b></div><div class="tile"><span class="sub">直近7日</span><b>'+weekDays()+'日</b></div><div class="tile"><span class="sub">合計</span><b>'+tp+'回</b></div></div>'+
+    '<div class="card plain"><h3>直近7日のプレイ回数</h3><div class="week">'+wk+'</div></div>'+
+    '<div class="stack8"><h2>ゲーム別</h2><div class="table"><div class="trow head"><span>ゲーム</span><span>Lv</span><span>ベスト</span><span>回数</span></div>'+rows+'</div></div>'+
+    '<div class="stack8"><h2>最近の結果</h2>'+(hist?'<div class="list">'+hist+'</div>':'<p class="sub">まだ記録がありません。ホームの「スタート」から1回あそんでみましょう。</p>')+'</div>'+
+    '<p class="sub">得点と正確さは遊んだ内容の目安です。診断や治療、認知症の予防を目的としたものではありません。</p>'+
+    '</section>';
+}
+
+function tplSettings(){
+  return '<section class="screen">'+
+    '<div class="topbar"><h1>設定</h1></div>'+
+    '<div class="list">'+
+      '<div class="setrow"><div class="stack8" style="gap:0"><b>目的</b><span class="sub">いま: '+esc(GOALS[goalKey()].label)+(save.goal?'':'(年代からのおすすめ)')+'</span></div><button class="agechip" data-act="open-goal">変更</button></div>'+
+      '<div class="setrow"><div class="stack8" style="gap:0"><b>年代</b><span class="sub">いま: '+AGES[save.age].label+'(はじめの難しさとおすすめ目的に使います)</span></div><button class="agechip" data-act="open-age">変更</button></div>'+
+      '<div class="setrow"><div class="stack8" style="gap:0"><b>効果音</b><span class="sub">正解・不正解で短い音が鳴ります</span></div>'+
+        '<div style="display:flex;align-items:center;gap:8px"><span class="sub" style="width:2em">'+(save.sound?'オン':'オフ')+'</span><button class="switch" role="switch" aria-checked="'+save.sound+'" aria-label="効果音" data-act="toggle-sound"><span class="knob"></span></button></div></div>'+
+    '</div>'+
+    '<div class="card"><h3>このアプリについて</h3>'+
+      '<p class="sub">外部には通信しません。記録(得点・レベル・日付)はこの端末のブラウザ内だけに保存されます。ブラウザのデータを消すと記録も消えます。</p>'+
+      '<p class="sub">結果は遊んだ内容の目安です。診断や治療、認知症の予防を目的としたものではありません。</p>'+
+      '<p class="sub">v2 プロトタイプ ・ 難しさや出題数は仮の値です。</p></div>'+
+    '<div class="grow"></div>'+
+    '<button class="btn danger" data-act="reset-ask">記録をすべて消す</button></section>';
+}
+
+function sessionLabel(){const s=ui.session;return s.queue.length>1?(s.idx+1)+' / '+s.queue.length+' ゲーム目':'';}
+
+function tplIntro(){
+  const it=ui.session.queue[ui.session.idx],g=it.g,lv=lvOf(g);
+  const hw=howto(g,lv,optOf(it)).map(t=>'<li>'+esc(t)+'</li>').join('');
+  return '<section class="screen">'+
+    '<div class="topbar"><button class="iconbtn" data-act="intro-close" aria-label="やめてホームへ戻る">'+ic('close',24)+'</button><span class="sub">'+sessionLabel()+'</span></div>'+
+    '<div class="stack8"><span class="chipstatic">'+esc(GAME[g].fn)+'</span><h1>'+esc(it.n)+'</h1></div>'+
+    '<div class="card"><h3>あそびかた</h3><ol class="how">'+hw+'</ol></div>'+
+    '<p class="sub">いまのレベル Lv'+lv+' ・ 所要 約'+GAME[g].est+'秒。成績に合わせて、次回のレベルが自動で変わります。</p>'+
+    '<div class="grow"></div>'+
+    '<button class="btn" data-act="begin">はじめる</button></section>';
+}
+
+function tplPlay(){
+  const it=ui.session.queue[ui.session.idx];
+  return '<section class="screen" aria-label="'+esc(it.n)+'">'+
+    '<div class="playbar"><button class="iconbtn" data-act="quit" aria-label="中断する">'+ic('close',24)+'</button>'+
+    '<div class="pbar" role="progressbar" aria-label="進み具合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="pbar"><span id="pfill"></span></div>'+
+    '<span class="lvtag">Lv'+ui.curLevel+'</span></div>'+
+    '<div class="ptitle"><h2>'+esc(it.n)+'</h2><span class="sub" id="pcount"></span></div>'+
+    '<p class="hint" id="hint"></p>'+
+    '<div class="msg" id="msg" aria-live="polite"></div>'+
+    '<div class="board" id="board"></div>'+
+    '<div class="timer" id="timer" hidden><span id="tfill"></span></div>'+
+    '<div class="controls" id="controls"></div></section>';
+}
+
+function levelMsg(r){
+  if(r.lvAfter>r.lvBefore)return 'レベルが上がります(Lv'+r.lvBefore+' → Lv'+r.lvAfter+')。次回は少し難しくなります。';
+  if(r.lvAfter<r.lvBefore)return '次回は少しやさしくします(Lv'+r.lvBefore+' → Lv'+r.lvAfter+')。';
+  if(r.lvBefore>=8&&r.acc>=0.85)return '最高レベル(Lv8)です。';
+  return '同じレベル(Lv'+r.lvBefore+')で続けます。';
+}
+
+function tplGResult(){
+  const s=ui.session,r=s.results[s.idx],it=s.queue[s.idx],multi=s.queue.length>1,last=s.idx>=s.queue.length-1;
+  const acc=Math.round(r.acc*100);
+  let lines='<div class="lrow"><span>正確さ</span><b>'+acc+'%</b></div><div class="lrow"><span>得点</span><b>'+r.score+'点</b></div>';
+  if(r.avgRT!=null)lines+='<div class="lrow"><span>正解時の平均反応</span><b>'+Math.round(r.avgRT)+' ms</b></div>';
+  r.lines.forEach(l=>{lines+='<div class="lrow"><span>'+esc(l.l)+'</span><b>'+esc(l.v)+'</b></div>';});
+  const btns=multi
+    ? '<button class="btn" data-act="next">'+(last?'結果を見る':'次のゲームへ')+'</button>'
+    : '<button class="btn" data-act="retry">もう一度</button><button class="btn ghost" data-act="home">ホームへ</button>';
+  return '<section class="screen">'+
+    '<div class="topbar"><span class="sub">'+sessionLabel()+'</span></div>'+
+    '<div class="stack8"><span class="chipstatic">'+esc(GAME[r.g].fn)+'</span><h1>'+esc(it.n)+'</h1></div>'+
+    '<div class="card"><span class="sub">正解した数</span><span class="bignum">'+r.correct+' / '+r.total+'</span><div class="meter"><span style="width:'+acc+'%"></span></div>'+
+      (r.newBest?'<span class="tagbest">'+(r.firstTime?'初めての記録':'自己ベスト更新')+'</span>':'')+'</div>'+
+    '<div class="list">'+lines+'</div>'+
+    '<div class="extra"><b>次回</b><span>'+esc(levelMsg(r))+'</span></div>'+
+    '<p class="sub">結果は遊んだ内容の目安です。診断や治療、認知症の予防を目的としたものではありません。</p>'+
+    '<div class="grow"></div><div class="grow2">'+btns+'</div></section>';
+}
+
+function tplSResult(){
+  const s=ui.session,st=streakInfo();
+  const total=s.results.reduce((a,r)=>a+r.score,0);
+  const rows=s.results.map((r,i)=>{const acc=Math.round(r.acc*100);
+    return '<div class="stack8" style="gap:4px"><div class="lrow" style="border:none;padding:0"><span>'+esc(s.queue[i].n)+'</span><b>'+r.correct+' / '+r.total+'</b></div><div class="meter" style="background:var(--light1)"><span style="width:'+acc+'%"></span></div></div>';}).join('');
+  return '<section class="screen">'+
+    '<div class="topbar"><span class="sub"></span></div>'+
+    '<h1>おつかれさま</h1>'+
+    '<div class="card"><span class="sub">今日の得点</span><span class="bignum">'+total+'点</span><span class="sub">連続'+st.streak+'日</span></div>'+
+    '<div class="card plain" style="gap:12px">'+rows+'</div>'+
+    '<div class="extra"><b>次の目標</b><span>'+esc(goalText(st.streak))+'</span></div>'+
+    '<p class="sub">結果は遊んだ内容の目安です。診断や治療、認知症の予防を目的としたものではありません。</p>'+
+    '<div class="grow"></div><div class="grow2"><button class="btn" data-act="again">もう一度</button><button class="btn ghost" data-act="home">ホームへ</button></div></section>';
+}
+
+function tplTabs(){
+  return [['home','ホーム','home'],['records','記録','chart'],['settings','設定','gear']].map(t=>
+    '<button class="tab" data-act="tab" data-v="'+t[0]+'"'+(ui.screen===t[0]?' aria-current="page"':'')+'>'+ic(t[2],24)+'<span>'+t[1]+'</span></button>').join('');
+}
+
+function render(){
+  const app=$('#app'),tabs=$('#tabs');
+  const map={select:tplSelect,home:tplHome,records:tplRecords,settings:tplSettings,intro:tplIntro,play:tplPlay,gresult:tplGResult,sresult:tplSResult};
+  app.innerHTML=map[ui.screen]();
+  if(ui.screen==='home'||ui.screen==='records'||ui.screen==='settings'){tabs.hidden=false;tabs.innerHTML=tplTabs();}
+  else{tabs.hidden=true;tabs.innerHTML='';}
+  window.scrollTo(0,0);app.scrollTop=0;
+}
+
+/* ================= シート ================= */
+function openSheet(kind){
+  ui.sheet=kind;
+  let body='';
+  if(kind==='age'){
+    body='<h2 id="st">年代を変える</h2>'+Object.keys(AGES).map(k=>'<button class="opt" data-act="set-age" data-v="'+k+'" aria-pressed="'+(save.age===k)+'"><b>'+AGES[k].label+'</b><span class="sub">おすすめ: '+esc(GOALS[AGES[k].goal].label)+'</span></button>').join('')+
+      '<p class="sub">年代を変えても、選んだ目的とゲームごとのレベルは変わりません。目的を選んでいない場合だけ、おすすめの目的が変わります。</p><button class="btn ghost" data-act="close-sheet">閉じる</button>';
+  }else if(kind==='goal'){
+    const ak=AGES[save.age].goal;
+    body='<h2 id="st">目的を選ぶ</h2>'+GOAL_ORDER.map(k=>'<button class="opt" data-act="set-goal" data-v="'+k+'" aria-pressed="'+(goalKey()===k)+'" style="height:auto;min-height:56px;padding:8px 16px"><span style="display:flex;flex-direction:column"><b>'+esc(GOALS[k].label)+(k===ak?'(年代のおすすめ)':'')+'</b><span class="sub">'+esc(GOALS[k].blurb)+'</span></span></button>').join('')+
+      '<p class="sub">目的ごとの遊び方は目安です。続けると日常の能力が上がることを保証するものではありません。</p><button class="btn ghost" data-act="close-sheet">閉じる</button>';
+  }else if(kind==='quit'){
+    body='<h2 id="st">ここで中断します</h2><p class="sub">この回の記録は残りません。</p><button class="btn" data-act="retry">もう一度はじめる</button><button class="btn ghost" data-act="home">ホームへ戻る</button>';
+  }else if(kind==='reset'){
+    body='<h2 id="st">記録をすべて消しますか?</h2><p class="sub">得点・レベル・日付の記録がこの端末から消えます。元には戻せません。</p><button class="btn danger" data-act="reset-do">消す</button><button class="btn ghost" data-act="close-sheet">やめる</button>';
+  }
+  $('#layer').innerHTML='<div class="layer"><button class="scrim"'+(kind==='quit'?' tabindex="-1" aria-hidden="true"':' data-act="close-sheet" aria-label="閉じる"')+'></button><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="st">'+body+'</div></div>';
+  const f=$('#layer .opt, #layer .btn');if(f)f.focus();
+}
+function closeSheet(){ui.sheet=null;$('#layer').innerHTML='';}
+
+/* ================= フロー ================= */
+function setAge(v){save.age=v;persist();}
+function stopGame(){if(ui.game){ui.game.ctx.clear();}}
+function goHome(){stopGame();ui.game=null;ui.session=null;closeSheet();ui.screen='home';render();}
+function startQueue(queue){ui.session={queue:queue,idx:0,results:[]};ui.screen='intro';render();}
+function beginGame(){
+  closeSheet();stopGame();
+  const it=ui.session.queue[ui.session.idx];
+  ui.curLevel=lvOf(it.g);ui.screen='play';render();
+  const ctx=makeCtx(it);ui.game={ctx:ctx,item:it};
+  let n=3;
+  (function cd(){
+    if(n===0){ENG[engOf(it.g)].start(ctx);return;}
+    ctx.board.innerHTML='<div class="countdown" aria-hidden="true"><span>'+n+'</span></div>';
+    ctx.clearMsg(n===3?'よーい…':'');
+    n--;ctx.after(600,cd);
+  })();
+}
+function onGameDone(raw){
+  const s=ui.session,it=s.queue[s.idx],g=it.g;
+  const total=raw.total,correct=raw.correct,acc=total?correct/total:0;
+  const score=Math.max(0,Math.round(correct*100-(total-correct)*30));
+  const lvBefore=lvOf(g);let lvAfter=lvBefore;
+  if(acc>=0.85)lvAfter=Math.min(8,lvBefore+1);else if(acc<0.6)lvAfter=Math.max(1,lvBefore-1);
+  const prevBest=save.best[g]||0,newBest=score>prevBest;
+  save.level[g]=lvAfter;if(newBest)save.best[g]=score;
+  save.plays[g]=(save.plays[g]||0)+1;
+  const t=today();save.days[t]=(save.days[t]||0)+1;
+  save.history.unshift({d:t,t:Date.now(),g:g,n:it.n,acc:Math.round(acc*100),s:score,lv:lvBefore});
+  if(save.history.length>60)save.history.length=60;
+  persist();
+  s.results[s.idx]={g:g,correct:correct,total:total,acc:acc,score:score,lvBefore:lvBefore,lvAfter:lvAfter,newBest:newBest,firstTime:prevBest===0,
+    avgRT:raw.rts&&raw.rts.length?mean(raw.rts):null,lines:raw.lines||[]};
+  ui.screen='gresult';render();
+}
+
+function act(a,el){
+  switch(a){
+    case 'pick-age':ui.pendingAge=el.dataset.v;render();break;
+    case 'age-confirm':if(ui.pendingAge){setAge(ui.pendingAge);ui.screen='home';render();}break;
+    case 'tab':ui.screen=el.dataset.v;render();break;
+    case 'open-age':openSheet('age');break;
+    case 'open-goal':openSheet('goal');break;
+    case 'set-goal':save.goal=el.dataset.v;persist();closeSheet();render();break;
+    case 'set-age':setAge(el.dataset.v);closeSheet();render();break;
+    case 'close-sheet':closeSheet();break;
+    case 'start-session':startQueue(menuNow());break;
+    case 'start-quick':startQueue(menuNow().slice(0,2));break;
+    case 'play':startQueue([{g:el.dataset.g,n:el.dataset.n}]);break;
+    case 'begin':beginGame();break;
+    case 'intro-close':case 'home':goHome();break;
+    case 'quit':stopGame();openSheet('quit');break;
+    case 'retry':beginGame();break;
+    case 'next':
+      if(ui.session.idx<ui.session.queue.length-1){ui.session.idx++;ui.screen='intro';render();}
+      else{ui.screen='sresult';render();}
+      break;
+    case 'again':ui.session.idx=0;ui.session.results=[];ui.screen='intro';render();break;
+    case 'toggle-sound':save.sound=!save.sound;persist();if(save.sound)beep(true);render();break;
+    case 'reset-ask':openSheet('reset');break;
+    case 'reset-do':save=defaults();persist();closeSheet();ui.pendingAge=null;ui.session=null;ui.screen='select';render();break;
+  }
+}
+document.addEventListener('click',function(e){
+  const el=e.target.closest('[data-act]');
+  if(!el||el.disabled)return;
+  act(el.dataset.act,el);
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ui.sheet&&ui.sheet!=='quit')closeSheet();});
+
+/* ================= ゲーム共通(ctx) ================= */
+function makeCtx(item){
+  const timers=new Set(),rafs=new Set();let alive=true;
+  const c={
+    level:lvOf(item.g),opt:optOf(item),peekFn:null,
+    alive:()=>alive,
+    after(ms,fn){const id=setTimeout(function(){timers.delete(id);if(alive)fn();},ms);timers.add(id);return id;},
+    cancel(id){clearTimeout(id);timers.delete(id);},
+    raf(fn){const id=requestAnimationFrame(function(t){rafs.delete(id);if(alive)fn(t);});rafs.add(id);return id;},
+    clear(){alive=false;timers.forEach(clearTimeout);rafs.forEach(cancelAnimationFrame);timers.clear();rafs.clear();},
+    board:$('#board'),controls:$('#controls'),
+    hint(t){$('#hint').textContent=t;},
+    progress(done,total){
+      $('#pfill').style.width=(100*done/total)+'%';
+      $('#pbar').setAttribute('aria-valuenow',Math.round(100*done/total));
+      $('#pcount').textContent=Math.min(done+1,total)+' / '+total;
+    },
+    feedback(ok,text){
+      const m=$('#msg');m.className='msg '+(ok?'ok':'ng');
+      m.innerHTML=ic(ok?'check':'cross',24)+'<span>'+esc(text||(ok?'せいかい':'ざんねん'))+'</span>';
+      beep(ok);
+    },
+    clearMsg(t){const m=$('#msg');m.className='msg';m.textContent=t||'';},
+    startTimer(ms){
+      const t=$('#timer'),f=$('#tfill');t.hidden=false;
+      f.style.transition='none';f.style.width='100%';void f.offsetWidth;
+      f.style.transition='width '+ms+'ms linear';f.style.width='0%';
+    },
+    stopTimer(){const f=$('#tfill');if(!f)return;const w=f.getBoundingClientRect().width;f.style.transition='none';f.style.width=w+'px';},
+    finish(raw){if(!alive)return;c.clear();onGameDone(raw);}
+  };
+  return c;
+}
+
+/* ================= ゲーム ================= */
+const ENG={};
+const BLUE='#0F766E',CORAL='#E0603A';
+
+/* --- ルール切替 --- */
+ENG.switch={start(ctx){
+  const lv=ctx.level,total=20,limit=4200-340*lv,pSw=0.25+0.05*lv;
+  let i=0,correct=0,prev=null,cur=null,t0=0,answered=true,tId=null;
+  const rts=[],swRT=[],rpRT=[];
+  ctx.hint('合図が「形」か「大きさ」かを見て、すばやく答えます');
+  ctx.board.innerHTML='<div class="stage"><div id="cue"></div><div class="shapebox" id="shape"></div></div>';
+  ctx.controls.innerHTML='<button class="ans" data-a="L" id="aL"></button><button class="ans" data-a="R" id="aR"></button>';
+  const cue=$('#cue'),box=$('#shape'),aL=$('#aL'),aR=$('#aR');
+  const want=c=>c.rule==='shape'?(c.shape==='circle'?'L':'R'):(c.big?'L':'R');
+  ctx.peekFn=()=>cur&&!answered?{want:want(cur)}:null;
+  ctx.controls.onclick=function(e){const b=e.target.closest('button[data-a]');if(b)respond(b.dataset.a);};
+  ctx.progress(0,total);
+  function next(){
+    if(i>=total){
+      const lines=[];
+      if(swRT.length>=2&&rpRT.length>=2){const d=Math.round(mean(swRT)-mean(rpRT));lines.push({l:'切り替えの遅れ',v:(d>=0?'+':'')+d+' ms'});}
+      return ctx.finish({correct:correct,total:total,rts:rts,lines:lines});
+    }
+    const rule=prev==null?pick(['shape','size']):(Math.random()<pSw?(prev==='shape'?'size':'shape'):prev);
+    cur={rule:rule,shape:pick(['circle','square']),big:Math.random()<0.5,isSwitch:prev!=null&&rule!==prev};
+    prev=rule;
+    cue.innerHTML=rule==='shape'?'<span class="cuepill">形</span>':'<span class="cuepill size">大きさ</span>';
+    const sz=cur.big?132:56;
+    box.innerHTML=cur.shape==='circle'
+      ?'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="'+BLUE+'"/></svg>'
+      :'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 100 100" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="10" fill="'+BLUE+'"/></svg>';
+    aL.textContent=rule==='shape'?'丸':'大きい';aR.textContent=rule==='shape'?'四角':'小さい';
+    aL.disabled=aR.disabled=false;ctx.clearMsg('');
+    answered=false;t0=now();ctx.startTimer(limit);
+    tId=ctx.after(limit,function(){respond(null);});
+  }
+  function respond(side){
+    if(answered)return;answered=true;ctx.cancel(tId);ctx.stopTimer();
+    const rt=now()-t0,ok=side!=null&&side===want(cur);
+    if(ok){correct++;rts.push(rt);(cur.isSwitch?swRT:rpRT).push(rt);}
+    aL.disabled=aR.disabled=true;
+    ctx.feedback(ok,side==null?'じかんぎれ':(ok?'せいかい':'ざんねん'));
+    i++;ctx.progress(i,total);
+    ctx.after(ok?450:750,next);
+  }
+  next();
+}};
+
+/* --- ストップ&ゴー --- */
+ENG.gonogo={start(ctx){
+  const lv=ctx.level,total=30,show=Math.round(1150-75*lv),pGo=0.62+0.025*lv;
+  const seq=[];for(let k=0;k<total;k++)seq.push(k===0?true:Math.random()<pGo);
+  let ng=seq.filter(x=>!x).length;while(ng<6){const k=rnd(1,total-1);if(seq[k]){seq[k]=false;ng++;}}
+  const goCount=seq.filter(Boolean).length,ngCount=total-goCount;
+  let i=0,hits=0,cr=0,cur=false,t0=0,active=false,tId=null;const rts=[];
+  ctx.hint('丸が出たらタップ。四角が出たらがまん');
+  ctx.board.innerHTML='<div class="stage"><div class="shapebox" id="gshape"><span class="fix">+</span></div></div>';
+  ctx.controls.innerHTML='<button class="tap" id="tap">タップ</button>';
+  const box=$('#gshape');
+  ctx.peekFn=()=>({active:active,go:cur});
+  $('#tap').onclick=function(){if(active)resolve(now()-t0);};
+  ctx.progress(0,total);
+  function trial(){
+    if(i>=total){
+      return ctx.finish({correct:hits+cr,total:total,rts:rts,lines:[{l:'タップできた丸',v:hits+' / '+goCount},{l:'がまんできた四角',v:cr+' / '+ngCount}]});
+    }
+    cur=seq[i];active=true;ctx.clearMsg('');
+    box.innerHTML=cur
+      ?'<svg width="120" height="120" viewBox="0 0 100 100" aria-label="丸"><circle cx="50" cy="50" r="48" fill="'+BLUE+'"/></svg>'
+      :'<svg width="120" height="120" viewBox="0 0 100 100" aria-label="四角"><rect x="2" y="2" width="96" height="96" rx="10" fill="'+CORAL+'"/><path d="M28 28L72 72M72 28L28 72" stroke="#fff" stroke-width="10" stroke-linecap="round"/></svg>';
+    t0=now();tId=ctx.after(show,function(){resolve(null);});
+  }
+  function resolve(rt){
+    if(!active)return;active=false;ctx.cancel(tId);
+    let ok,text;
+    if(cur){if(rt!=null){hits++;rts.push(rt);ok=true;text='ナイス';}else{ok=false;text='のがした';}}
+    else{if(rt!=null){ok=false;text='タップしちゃった';}else{cr++;ok=true;text='がまん成功';}}
+    ctx.feedback(ok,text);
+    box.innerHTML='<span class="fix">+</span>';
+    i++;ctx.progress(i,total);
+    ctx.after(rnd(350,650)+(ok?0:200),trial);
+  }
+  trial();
+}};
+
+/* --- ひらめきタップ(向きがちがう三角を探す) --- */
+ENG.oddone={start(ctx){
+  const lv=ctx.level,total=12,limit=7000-560*lv,jit=(lv-1)*4;
+  let N=lv<=2?3:lv<=4?4:lv<=6?5:6;
+  const W=Math.min(ctx.board.clientWidth||320,360),gap=6;
+  N=Math.max(3,Math.min(N,Math.floor((W+gap)/(44+gap))));
+  let i=0,correct=0,cur=null,t0=0,answered=true,tId=null;const rts=[];
+  ctx.hint('1つだけ向きがちがう三角をタップ');
+  ctx.peekFn=()=>cur&&!answered?{target:cur.target}:null;
+  ctx.progress(0,total);
+  const tri=a=>'<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate('+a+'deg)"><path d="M12 3L21 20H3Z" fill="'+BLUE+'"/></svg>';
+  ctx.board.onclick=function(e){const c=e.target.closest('.cell');if(c&&!answered)resolve(+c.dataset.i);};
+  function trial(){
+    if(i>=total)return ctx.finish({correct:correct,total:total,rts:rts,lines:[{l:'並べた三角の数',v:(N*N)+'こ'}]});
+    const n2=N*N,target=rnd(0,n2-1),tAng=pick([90,-90,180])+rnd(-jit,jit);
+    let cells='';for(let k=0;k<n2;k++)cells+='<button class="cell" data-i="'+k+'" aria-label="三角">'+tri(k===target?tAng:rnd(-jit,jit))+'</button>';
+    ctx.board.innerHTML='<div class="grid" style="grid-template-columns:repeat('+N+',minmax(0,1fr))">'+cells+'</div>';
+    ctx.clearMsg('');cur={target:target};answered=false;t0=now();ctx.startTimer(limit);
+    tId=ctx.after(limit,function(){resolve(-1);});
+  }
+  function resolve(idx){
+    if(answered)return;answered=true;ctx.cancel(tId);ctx.stopTimer();
+    const ok=idx===cur.target,rt=now()-t0;if(ok){correct++;rts.push(rt);}
+    const cells=ctx.board.querySelectorAll('.cell');cells.forEach(c=>{c.disabled=true;});
+    cells[cur.target].classList.add(ok?'good':'reveal');
+    ctx.feedback(ok,idx===-1?'じかんぎれ':(ok?'みつけた':'おしい'));
+    i++;ctx.progress(i,total);ctx.after(ok?500:950,trial);
+  }
+  trial();
+}};
+
+/* --- ナンバーバック --- */
+ENG.nback={start(ctx){
+  const lv=ctx.level,n=lv<=3?1:lv<=6?2:3,scored=18,len=n+scored,period=2300,stim=1500;
+  const seq=[];
+  for(let k=0;k<len;k++){
+    if(k<n)seq.push(rnd(1,9));
+    else if(Math.random()<0.33)seq.push(seq[k-n]);
+    else{let d;do{d=rnd(1,9);}while(d===seq[k-n]);seq.push(d);}
+  }
+  let k=-1,correct=0,answered=true,canAns=false;
+  ctx.hint(n+'つ前に出た数字と、いま出ている数字が同じかを答えます');
+  ctx.board.innerHTML='<div class="stage"><p class="qlabel" id="q"></p><div class="digit" id="d"></div></div>';
+  ctx.controls.innerHTML='<button class="ans" data-a="same">同じ</button><button class="ans" data-a="diff">ちがう</button>';
+  const btns=ctx.controls.querySelectorAll('button');
+  ctx.peekFn=()=>({k:k,canAns:canAns,match:k>=n&&seq[k]===seq[k-n]});
+  ctx.controls.onclick=function(e){const b=e.target.closest('button[data-a]');if(b)respond(b.dataset.a==='same');};
+  function setBtns(on){btns.forEach(b=>{b.disabled=!on;});}
+  function respond(isSame){
+    if(!canAns||answered)return;answered=true;canAns=false;
+    const ok=isSame===(seq[k]===seq[k-n]);if(ok)correct++;
+    ctx.feedback(ok,ok?'せいかい':'ざんねん');setBtns(false);
+  }
+  function step(){
+    k++;
+    if(k>=len){ctx.progress(scored,scored);return ctx.finish({correct:correct,total:scored,rts:[],lines:[{l:'条件',v:n+'つ前'}]});}
+    const sc=k>=n;
+    $('#d').textContent=seq[k];$('#d').style.visibility='visible';
+    $('#q').textContent=sc?n+'つ前の数字と同じ?':'おぼえよう';
+    ctx.clearMsg('');canAns=sc;answered=!sc;setBtns(sc);
+    ctx.progress(Math.max(0,k-n),scored);
+    ctx.after(stim,function(){const d=$('#d');if(d)d.style.visibility='hidden';});
+    ctx.after(period-400,function(){
+      if(sc&&!answered){answered=true;canAns=false;ctx.feedback(false,'じかんぎれ');setBtns(false);}
+    });
+    ctx.after(period,step);
+  }
+  step();
+}};
+
+/* --- 位置おぼえ --- */
+ENG.span={start(ctx){
+  const lv=ctx.level,G=lv<=4?3:4,cells=G*G,rounds=6,rev=!!ctx.opt.rev;
+  let len=Math.max(2,Math.min(2+Math.ceil(lv/2)-(rev?1:0),cells-1)),r=0,okRounds=0,maxLen=0,seq=[],pos=0,accepting=false;
+  ctx.hint(rev?'光った順番を覚えて、さかさまの順番でタップ':'光った順番を覚えて、同じ順番でタップ');
+  let html='';for(let c=0;c<cells;c++)html+='<button class="padc" data-i="'+c+'" aria-label="マス'+(c+1)+'"></button>';
+  ctx.board.innerHTML='<div class="pad locked" id="pad" style="grid-template-columns:repeat('+G+',minmax(0,1fr))">'+html+'</div>';
+  const pad=$('#pad'),els=pad.querySelectorAll('.padc');
+  const want=()=>rev?seq[len-1-pos]:seq[pos];
+  ctx.peekFn=()=>({accepting:accepting,seq:seq,pos:pos,next:accepting?want():null});
+  ctx.progress(0,rounds);
+  function light(c,on){els[c].classList.toggle('lit',on);}
+  function round(){
+    if(r>=rounds)return ctx.finish({correct:okRounds,total:rounds,rts:[],lines:[{l:'最長で再現できた数',v:maxLen?maxLen+'こ':'—'},{l:'ラウンド',v:okRounds+' / '+rounds+' 成功'}]});
+    seq=shuffle(Array.from({length:cells},(_,i)=>i)).slice(0,len);pos=0;accepting=false;
+    els.forEach(e=>e.classList.remove('lit','bad'));pad.classList.add('locked');
+    ctx.clearMsg('みてね('+len+'こ)');
+    let t=600;
+    seq.forEach(function(c){ctx.after(t,function(){light(c,true);});ctx.after(t+600,function(){light(c,false);});t+=850;});
+    ctx.after(t,function(){accepting=true;pad.classList.remove('locked');ctx.clearMsg(rev?'さかさまにタップ':'同じ順番でタップ');});
+  }
+  pad.onclick=function(e){
+    const b=e.target.closest('.padc');if(!b||!accepting)return;
+    const c=+b.dataset.i;
+    if(c===want()){
+      b.classList.add('lit');ctx.after(180,function(){b.classList.remove('lit');});
+      pos++;if(pos===len)endRound(true);
+    }else{b.classList.add('bad');endRound(false);}
+  };
+  function endRound(ok){
+    accepting=false;pad.classList.add('locked');
+    if(ok){okRounds++;maxLen=Math.max(maxLen,len);}
+    ctx.feedback(ok,ok?len+'こ ぴったり':'おしい');
+    r++;ctx.progress(r,rounds);
+    len=ok?Math.min(len+1,cells-1):Math.max(2,len-1);
+    ctx.after(1100,round);
+  }
+  round();
+}};
+
+/* --- 周辺ターゲット判断 / ダブルタスク --- */
+ENG.ufov={start(ctx){
+  const lv=ctx.level,total=14,dist=!!ctx.opt.dist||lv>=4;
+  let D=clamp(760-65*lv,80,900),i=0,correct=0,streak=0,cur=null,selC=null,selP=null,phase='fix';
+  const Ds=[],okDs=[],R=37,names=['上','右上','右','右下','下','左下','左','左上'];
+  const XY=names.map((_,k)=>{const a=(-90+45*k)*Math.PI/180;return {x:50+R*Math.cos(a),y:50+R*Math.sin(a)};});
+  const st=k=>'left:'+XY[k].x.toFixed(2)+'%;top:'+XY[k].y.toFixed(2)+'%';
+  ctx.hint('中央の形と、◆(ひし形)があった場所を答えます'+(dist?'。三角はじゃま':''));
+  ctx.board.innerHTML='<div class="ring" id="ring"></div>';
+  const ring=$('#ring');
+  ctx.peekFn=()=>cur?{phase:phase,center:cur.center,tpos:cur.tpos}:null;
+  ctx.progress(0,total);
+  const ph=()=>XY.map((_,k)=>'<span class="rp ph" style="'+st(k)+'"></span>').join('');
+  function trial(){
+    if(i>=total){
+      const last=Ds.slice(-6),lines=[{l:'平均の表示時間(後半)',v:Math.round(mean(last))+' ms'}];
+      if(okDs.length)lines.push({l:'正解できた最短の表示時間',v:Math.round(Math.min.apply(null,okDs))+' ms'});
+      return ctx.finish({correct:correct,total:total,rts:[],lines:lines});
+    }
+    cur={center:pick(['circle','square']),tpos:rnd(0,7)};selC=selP=null;phase='fix';
+    ring.innerHTML=ph()+'<span class="fixc">+</span>';ctx.clearMsg('まん中を見てね');
+    ctx.after(700,showStim);
+  }
+  function showStim(){
+    phase='stim';
+    const cs=cur.center==='circle'?'<circle cx="50" cy="50" r="46" fill="'+BLUE+'"/>':'<rect x="6" y="6" width="88" height="88" rx="6" fill="'+BLUE+'"/>';
+    let h=ph()+'<svg class="cshape" viewBox="0 0 100 100" aria-hidden="true">'+cs+'</svg>';
+    for(let k=0;k<8;k++){
+      if(k===cur.tpos)h+='<svg class="rp tgt" style="'+st(k)+'" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4L96 50L50 96L4 50Z" fill="'+CORAL+'"/></svg>';
+      else if(dist)h+='<svg class="rp" style="'+st(k)+';width:9%;min-width:30px" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 14L90 84H10Z" fill="none" stroke="#666666" stroke-width="10" stroke-linejoin="round"/></svg>';
+    }
+    ring.innerHTML=h;
+    const t0=now();
+    (function tick(){if(now()-t0>=D)hideStim();else ctx.raf(tick);})();
+  }
+  function hideStim(){
+    phase='mask';
+    let h='<span class="mk" style="left:50%;top:50%"></span>';
+    for(let k=0;k<8;k++)h+='<span class="mk" style="'+st(k)+'"></span>';
+    ring.innerHTML=h;
+    ctx.after(350,showAnswer);
+  }
+  function showAnswer(){
+    phase='answer';
+    let h='<div class="cbtns"><button class="cbtn" data-c="circle" aria-pressed="false">丸</button><button class="cbtn" data-c="square" aria-pressed="false">四角</button></div>';
+    for(let k=0;k<8;k++)h+='<button class="rbtn" data-p="'+k+'" style="'+st(k)+'" aria-pressed="false" aria-label="'+names[k]+'"></button>';
+    ring.innerHTML=h;ctx.clearMsg('中央の形と、◆の場所をタップ');
+  }
+  ring.onclick=function(e){
+    if(phase!=='answer')return;
+    const c=e.target.closest('.cbtn'),p=e.target.closest('.rbtn');
+    if(c){selC=c.dataset.c;ring.querySelectorAll('.cbtn').forEach(b=>b.setAttribute('aria-pressed',String(b===c)));}
+    if(p){selP=+p.dataset.p;ring.querySelectorAll('.rbtn').forEach(b=>b.setAttribute('aria-pressed',String(b===p)));}
+    if(selC!=null&&selP!=null)evaluate();
+  };
+  function evaluate(){
+    phase='fb';
+    const okC=selC===cur.center,okP=selP===cur.tpos,ok=okC&&okP;
+    Ds.push(D);
+    ring.querySelectorAll('.rbtn')[cur.tpos].classList.add('reveal');
+    ctx.feedback(ok,ok?'せいかい':(okC?'場所がちがいます':(okP?'中央の形がちがいます':'どちらもおしい')));
+    if(ok){correct++;okDs.push(D);streak++;if(streak>=2){D=Math.max(60,D*0.85);streak=0;}}
+    else{streak=0;D=Math.min(900,D*1.3);}
+    i++;ctx.progress(i,total);ctx.after(1100,trial);
+  }
+  trial();
+}};
+
+/* --- 素早く判断 --- */
+ENG.compare={start(ctx){
+  const lv=ctx.level,total=20;let T=clamp(3000-280*lv,800,3500);
+  let i=0,correct=0,cur=null,t0=0,answered=true,tId=null;const rts=[];
+  ctx.hint(lv<=3?'5より大きいか小さいかを、すばやく答えます':'基準の数より大きいか小さいかを、すばやく答えます');
+  ctx.board.innerHTML='<div class="stage"><p class="qlabel" id="q"></p><div class="digit" id="d"></div></div>';
+  ctx.controls.innerHTML='<button class="ans" data-a="L">大きい</button><button class="ans" data-a="R">小さい</button>';
+  const btns=ctx.controls.querySelectorAll('button');
+  ctx.peekFn=()=>cur&&!answered?{want:cur.want}:null;
+  ctx.controls.onclick=function(e){const b=e.target.closest('button[data-a]');if(b)respond(b.dataset.a);};
+  ctx.progress(0,total);
+  function next(){
+    if(i>=total)return ctx.finish({correct:correct,total:total,rts:rts,lines:[{l:'最終の制限時間',v:(T/1000).toFixed(1)+' 秒'}]});
+    const ref=lv<=3?5:pick([3,4,5,6,7]);let d;do{d=rnd(1,9);}while(d===ref);
+    cur={ref:ref,d:d,want:d>ref?'L':'R'};
+    $('#q').textContent=ref+'より大きい?';$('#d').textContent=d;
+    btns.forEach(b=>{b.disabled=false;});ctx.clearMsg('');
+    answered=false;t0=now();ctx.startTimer(T);tId=ctx.after(T,function(){respond(null);});
+  }
+  function respond(side){
+    if(answered)return;answered=true;ctx.cancel(tId);ctx.stopTimer();
+    const rt=now()-t0,ok=side!=null&&side===cur.want;
+    if(ok){correct++;rts.push(rt);T=Math.max(700,T*0.93);}else{T=Math.min(3500,T*1.15);}
+    btns.forEach(b=>{b.disabled=true;});
+    ctx.feedback(ok,side==null?'じかんぎれ':(ok?'せいかい':'ざんねん'));
+    i++;ctx.progress(i,total);ctx.after(ok?400:750,next);
+  }
+  next();
+}};
+
+/* --- ストループ(文字の意味と色がずれる) --- */
+const STROOP=[{k:'red',w:'あか',c:'#B71C1C'},{k:'blue',w:'あお',c:'#1565C0'},{k:'green',w:'みどり',c:'#2E7D32'},{k:'purple',w:'むらさき',c:'#6A1B9A'}];
+ENG.stroop={start(ctx){
+  const lv=ctx.level,total=20,limit=4300-300*lv,pCong=clamp(0.5-0.05*lv,0.1,0.5);
+  let i=0,correct=0,incOk=0,incN=0,cur=null,t0=0,answered=true,tId=null;const rts=[];
+  ctx.hint('文字の「意味」ではなく、文字の「色」を答えます');
+  ctx.board.innerHTML='<div class="stage"><p class="qlabel">この文字の「色」は?</p><div class="stword" id="sw"></div></div>';
+  ctx.controls.innerHTML='<div class="ans2">'+STROOP.map(x=>'<button class="ans" data-a="'+x.k+'">'+x.w+'</button>').join('')+'</div>';
+  const btns=ctx.controls.querySelectorAll('button');
+  ctx.peekFn=()=>cur&&!answered?{want:cur.ink.k}:null;
+  ctx.controls.onclick=function(e){const b=e.target.closest('button[data-a]');if(b)respond(b.dataset.a);};
+  ctx.progress(0,total);
+  function next(){
+    if(i>=total)return ctx.finish({correct:correct,total:total,rts:rts,lines:[{l:'色と文字がちがう問題',v:incOk+' / '+incN}]});
+    const w=pick(STROOP);let ink=w;
+    if(Math.random()>=pCong){do{ink=pick(STROOP);}while(ink===w);}
+    cur={w:w,ink:ink,cong:ink===w};
+    const sw=$('#sw');sw.textContent=w.w;sw.style.color=ink.c;
+    btns.forEach(b=>{b.disabled=false;});ctx.clearMsg('');
+    answered=false;t0=now();ctx.startTimer(limit);tId=ctx.after(limit,function(){respond(null);});
+  }
+  function respond(k){
+    if(answered)return;answered=true;ctx.cancel(tId);ctx.stopTimer();
+    const ok=k!=null&&k===cur.ink.k;
+    if(!cur.cong){incN++;if(ok)incOk++;}
+    if(ok){correct++;rts.push(now()-t0);}
+    btns.forEach(b=>{b.disabled=true;});
+    ctx.feedback(ok,k==null?'じかんぎれ':(ok?'せいかい':'ざんねん'));
+    i++;ctx.progress(i,total);ctx.after(ok?400:750,next);
+  }
+  next();
+}};
+
+/* --- 数字順タップ(1から順に探してタップ) --- */
+ENG.schulte={start(ctx){
+  const lv=ctx.level,N=lv<=2?3:lv<=6?4:5,n2=N*N,boards=N===3?3:N===4?2:1,totalNums=boards*n2,limit=n2*(2600-180*lv);
+  let b=0,nx=1,found=0,wrong=0,active=false,tId=null,t0=0;const times=[];
+  ctx.hint('1から順番に、数字をタップします');
+  ctx.peekFn=()=>active?{next:nx}:null;
+  ctx.progress(0,totalNums);
+  ctx.board.onclick=function(e){
+    const c=e.target.closest('.cell');if(!c||!active||c.disabled)return;
+    if(+c.dataset.n===nx){
+      c.classList.add('done');c.disabled=true;found++;nx++;ctx.progress(found,totalNums);beep(true);
+      if(nx>n2)endBoard(true);else ctx.clearMsg('つぎは '+nx);
+    }else{
+      wrong++;c.classList.add('reveal');ctx.after(300,function(){c.classList.remove('reveal');});beep(false);
+    }
+  };
+  function board(){
+    nx=1;
+    const nums=shuffle(Array.from({length:n2},(_,k)=>k+1));
+    ctx.board.innerHTML='<div class="grid" style="grid-template-columns:repeat('+N+',minmax(0,1fr))">'+nums.map(n=>'<button class="cell num" data-n="'+n+'">'+n+'</button>').join('')+'</div>';
+    ctx.clearMsg('つぎは 1');active=true;t0=now();ctx.startTimer(limit);
+    tId=ctx.after(limit,function(){endBoard(false);});
+  }
+  function endBoard(ok){
+    if(!active)return;active=false;ctx.cancel(tId);ctx.stopTimer();times.push(now()-t0);
+    ctx.board.querySelectorAll('.cell').forEach(c=>{c.disabled=true;});
+    ctx.feedback(ok,ok?'ぜんぶ見つけた':'じかんぎれ');
+    b++;
+    if(b>=boards)ctx.after(900,fin);else ctx.after(1000,board);
+  }
+  function fin(){
+    ctx.finish({correct:found,total:totalNums+wrong,rts:[],lines:[
+      {l:'盤面',v:N+'×'+N+' を '+boards+'回'},
+      {l:'見つけた数字',v:found+' / '+totalNums},
+      {l:'まちがえてタップ',v:wrong+'回'},
+      {l:'1回あたりの時間',v:(mean(times)/1000).toFixed(1)+' 秒'}]});
+  }
+  board();
+}};
+
+/* --- 絵おぼえ(覚えた絵が、あとで出たかを答える) --- */
+const PIC=[
+  {k:'star',c:'#E0603A',d:'M50 6l13 29 31 3-23 21 7 31-28-17-28 17 7-31-23-21 31-3z'},
+  {k:'heart',c:'#B71C1C',d:'M50 88C20 66 8 48 8 32 8 18 19 8 32 8c8 0 14 4 18 10 4-6 10-10 18-10 13 0 24 10 24 24 0 16-12 34-42 56z'},
+  {k:'moon',c:'#6A1B9A',d:'M62 8A42 42 0 1 0 92 66 34 34 0 0 1 62 8z'},
+  {k:'drop',c:'#1565C0',d:'M50 6C50 6 18 44 18 64a32 32 0 0 0 64 0C82 44 50 6 50 6z'},
+  {k:'bolt',c:'#D98100',d:'M58 4L22 54h24l-8 42 40-54H54z'},
+  {k:'leaf',c:'#2E7D32',d:'M16 84C10 40 40 12 88 12 88 62 60 90 16 84z'},
+  {k:'cloud',c:'#1565C0',d:'M28 76a18 18 0 0 1-2-36 24 24 0 0 1 46-6 20 20 0 0 1 4 42z'},
+  {k:'tri',c:'#0F766E',d:'M50 10L94 88H6Z'},
+  {k:'dia',c:'#E0603A',d:'M50 4L94 50L50 96L6 50Z'},
+  {k:'plus',c:'#6A1B9A',d:'M38 8h24v30h30v24H62v30H38V62H8V38h30z'},
+  {k:'circ',c:'#2E7D32',d:'M50 6a44 44 0 1 0 0.1 0z'},
+  {k:'sqr',c:'#1565C0',d:'M10 10H90V90H10Z'}
+];
+ENG.picmem={start(ctx){
+  const lv=ctx.level,K=Math.min(7,3+Math.ceil(lv/2)),rounds=3,per=6,total=rounds*per,study=900+500*K,limit=4600-200*lv;
+  let r=0,j=0,done=0,correct=0,oldOk=0,oldN=0,newOk=0,newN=0,probes=[],phase='idle',answered=true,t0=0,tId=null;const rts=[];
+  const icon=(p,sz)=>'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 100 100" aria-hidden="true"><path d="'+p.d+'" fill="'+p.c+'"/></svg>';
+  ctx.hint('絵を覚えて、あとで出た絵が「あった」か「なかった」かを答えます');
+  ctx.controls.innerHTML='<button class="ans" data-a="yes" disabled>あった</button><button class="ans" data-a="no" disabled>なかった</button>';
+  const btns=ctx.controls.querySelectorAll('button');
+  ctx.peekFn=()=>({phase:phase,canAns:!answered,old:probes[j]?probes[j].old:null});
+  ctx.controls.onclick=function(e){const b=e.target.closest('button[data-a]');if(b)answer(b.dataset.a);};
+  ctx.progress(0,total);
+  function round(){
+    if(r>=rounds)return ctx.finish({correct:correct,total:total,rts:rts,lines:[
+      {l:'覚えた絵の数',v:K+'こ'},
+      {l:'あった絵に「あった」',v:oldOk+' / '+oldN},
+      {l:'なかった絵に「なかった」',v:newOk+' / '+newN}]});
+    const set=shuffle(PIC).slice(0,K),rest=PIC.filter(p=>set.indexOf(p)<0);
+    probes=shuffle(set.slice(0,3).map(p=>({p:p,old:true})).concat(shuffle(rest).slice(0,3).map(p=>({p:p,old:false}))));
+    j=0;phase='study';answered=true;btns.forEach(b=>{b.disabled=true;});
+    ctx.board.innerHTML='<div class="grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">'+set.map(p=>'<div class="cell">'+icon(p,60)+'</div>').join('')+'</div>';
+    ctx.clearMsg('おぼえてね('+K+'こ)');ctx.startTimer(study);
+    ctx.after(study,function(){ctx.stopTimer();probe();});
+  }
+  function probe(){
+    if(j>=per){r++;phase='idle';ctx.after(600,round);return;}
+    phase='probe';const pr=probes[j];
+    ctx.board.innerHTML='<div class="stage"><p class="qlabel">さっきの中に、あった?</p><div class="shapebox">'+icon(pr.p,120)+'</div></div>';
+    btns.forEach(b=>{b.disabled=false;});ctx.clearMsg('');
+    answered=false;t0=now();ctx.startTimer(limit);tId=ctx.after(limit,function(){answer(null);});
+  }
+  function answer(v){
+    if(answered)return;answered=true;ctx.cancel(tId);ctx.stopTimer();
+    const pr=probes[j],ok=v!=null&&((v==='yes')===pr.old);
+    if(pr.old){oldN++;if(ok)oldOk++;}else{newN++;if(ok)newOk++;}
+    if(ok){correct++;rts.push(now()-t0);}
+    btns.forEach(b=>{b.disabled=true;});
+    ctx.feedback(ok,v==null?'じかんぎれ':(ok?'せいかい':'ざんねん'));
+    done++;ctx.progress(done,total);j++;ctx.after(ok?500:800,probe);
+  }
+  round();
+}};
+
+/* デバッグ用(動作確認で使う。画面には出ない) */
+window.__dojo={peek:function(){return ui.game&&ui.game.ctx.peekFn?ui.game.ctx.peekFn():null;},ui:function(){return ui;},save:function(){return save;}};
+
+render();
+})();
+</script>
