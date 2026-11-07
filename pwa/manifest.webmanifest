@@ -1,0 +1,17 @@
+{
+  "name": "脳トレ道場",
+  "short_name": "脳トレ道場",
+  "description": "短いミニゲームで遊ぶ脳トレアプリ。記録は端末の中だけに保存されます。",
+  "lang": "ja",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0F766E",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
