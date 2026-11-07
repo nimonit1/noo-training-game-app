@@ -24,17 +24,17 @@
 
 ## 最新版
 
-[`prototype/brain_dojo_v5.html`](./prototype/brain_dojo_v5.html)(v5)
+[`prototype/brain_dojo_v6.html`](./prototype/brain_dojo_v6.html)(v6)
 
 ## 動かし方
 
 ```bash
 # ブラウザで直接開く
-open prototype/brain_dojo_v5.html        # macOS の例。ほかの OS はファイルをブラウザへドラッグ
+open prototype/brain_dojo_v6.html        # macOS の例。ほかの OS はファイルをブラウザへドラッグ
 
 # または、簡易サーバーで開く
 python3 -m http.server 8000
-# → http://localhost:8000/prototype/brain_dojo_v5.html
+# → http://localhost:8000/prototype/brain_dojo_v6.html
 ```
 
 スマホ幅(390px 基準)で作っています。PC のブラウザでは、開発者ツールでスマホ幅にして確認してください。
@@ -52,7 +52,7 @@ python3 -m http.server 8000
 
 | パス | 内容 |
 |---|---|
-| `prototype/` | プロトタイプ本体。`brain_dojo_v1.html`(初版)、`v2`(目的で選ぶ方式)、`v3`、`v4`(画面サイズ修正)、`v5`(最新。下部表示の修正) |
+| `prototype/` | プロトタイプ本体。`brain_dojo_v1.html`(初版)、`v2`(目的で選ぶ方式)、`v3`、`v4`(画面サイズ修正)、`v5`(下部表示の修正)、`v6`(最新。注意書きの統一) |
 | `design/canvas/` | UI 設計のデザインキャンバス元データ(`*.dc.html`、`canvas.json`) |
 | `tests/` | Playwright による検証スクリプト |
 | `DESIGN_v2.md` | 設計書(背景・調査結果・設計判断・仕様・課題)。`DESIGN.md` は旧版 |

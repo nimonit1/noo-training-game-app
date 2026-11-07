@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
 const BASE = require('path').resolve(__dirname, '..');
-const URL = 'file://' + BASE + '/prototype/brain_dojo_v5.html';
+const URL = 'file://' + BASE + '/prototype/brain_dojo_v6.html';
 const SHOT = BASE + '/tests/shots/';
 fs.mkdirSync(SHOT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
